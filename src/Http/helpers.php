@@ -10,7 +10,7 @@ if (! function_exists('random_str')) {
      */
     function random_str($length = 8, $chars = null, $special = false)
     {
-        static $s;
+        $s = "";
         if (empty($chars)) {
             $chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789" . ($special ? "~!#$%^&*()_+{<>?.}": "");
         }
@@ -20,7 +20,7 @@ if (! function_exists('random_str')) {
         return $s;
     }
 }
-if (! function_exists('random_str')) {
+if (! function_exists('trimall')) {
     /**
      * 字符串替换所有特定字符
      *
@@ -34,5 +34,23 @@ if (! function_exists('random_str')) {
     {
         return preg_replace("#{$replace}#", '', $str);
     }
+}
+
+if (! function_exists('config')) {
+
+    /**
+     * 获取配置项
+     *
+     * @author pingo
+     * @created_at 00-00-00
+     * @param [type] $key
+     * @param [type] $default
+     * @return void
+     */
+    function config($key = null, $default = null)
+    {
+        return \Pingo\Config\Config::getInstance()->get($key, $default);
+    }
+
 }
 

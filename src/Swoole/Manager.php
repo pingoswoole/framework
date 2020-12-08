@@ -93,7 +93,8 @@ class Manager implements Factory
         if(file_exists($pidFile)){
             $pid = intval(file_get_contents($pidFile));
             \Swoole\Process::kill($pid, SIGKILL);
-             ConsoleTools::echoSuccess("stop commond is excute success");
+            unlink($pidFile);
+            ConsoleTools::echoSuccess("stop commond is excute success ");
         }else{
             ConsoleTools::echoSuccess("pid file is not exists!");
         }

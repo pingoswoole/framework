@@ -26,12 +26,12 @@ class ConsoleTools
 
     public static function echoSuccess($msg)
     {
-        echo ('[' . date('Y-m-d H:i:s') . '] [INFO] ' . "\033[32m{$msg}\033[0m");
+        echo ('[' . date('Y-m-d H:i:s') . '] [INFO] ' . "\033[32m{$msg}\033[0m" . PHP_EOL);
     }
 
     public static function echoError($msg)
     {
-        echo ('[' . date('Y-m-d H:i:s') . '] [ERROR] ' . "\033[31m{$msg}\033[0m");
+        echo ('[' . date('Y-m-d H:i:s') . '] [ERROR] ' . "\033[31m{$msg}\033[0m" . PHP_EOL);
     }
 
     /**

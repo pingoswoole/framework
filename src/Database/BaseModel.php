@@ -9,6 +9,7 @@ use InvalidArgumentException;
 use PDO;
 use RuntimeException;
 use Swoole\Coroutine;
+use Pingo\Traits\Singleton;
 
 /*!
  * Medoo database framework
@@ -47,6 +48,8 @@ class BaseModel
 
     private $in_transaction = false;
 
+    use Singleton;
+    
     public function __construct($config = null)
     {
         if (! empty($config)) {

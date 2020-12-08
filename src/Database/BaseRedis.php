@@ -3,6 +3,7 @@
 declare(strict_types=1);
  
 namespace Pingo\Database;
+use Pingo\Traits\Singleton;
 
 class BaseRedis
 {
@@ -10,6 +11,8 @@ class BaseRedis
 
     protected $connection;
 
+    use Singleton;
+    
     public function __construct($config = null)
     {
         if (! empty($config)) {
