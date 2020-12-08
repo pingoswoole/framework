@@ -66,7 +66,7 @@ class Manager implements Factory
                 // mix server
                 $classServerName = \Pingo\Swoole\Server\Mix::class;
         }
-        list($this->swooleServer, $this->childServer) = $classServerName::getInstance()->create();
+        list($this->swooleServer, $this->childServer) = $classServerName::getInstance($this->setting)->create();
         \App\SwooleEvent::globalService($this->swooleServer);
         return true;
     }

@@ -62,16 +62,15 @@ class WebSocket extends SwooleEvent
      * @created_at 00-00-00
      * @return void
      */
-    protected function create()
+    public function create()
     {
         ConsoleTools::opCacheClear();
-        $server_set = $this->swoole_set;
         $this->server = new \Swoole\Http\Server(
-            $this->server_set['host'], 
-            $this->server_set['port'], 
-            $this->server_set['mode'], 
-            $this->server_set['sock_type']);
-        $this->server->set($server_set['setting']);
+            $this->swoole_set['host'], 
+            $this->swoole_set['port'], 
+            $this->swoole_set['mode'], 
+            $this->swoole_set['sock_type']);
+        $this->server->set($this->swoole_set['setting']);
         $this->registerEvent(self::CALLBACK_EVENT);
         
         $this->addServer();
@@ -134,16 +133,9 @@ class WebSocket extends SwooleEvent
      */
     public function onStart(\Swoole\Server $server)
     {
-        if(false === \Swoole\Coroutine\System::writeFile(WEB_TMP_PATH . $this->setting['master_pid_file'], $server->master_pid)){
-            ConsoleTools::echoError("master pid file write error:" . WEB_TMP_PATH);
-            exit;
-        }
-        if(false === \Swoole\Coroutine\System::writeFile(WEB_TMP_PATH . $this->setting['manager_pid_file'], $server->manager_pid)){
-            ConsoleTools::echoError("manager pid file write error:" . WEB_TMP_PATH);
-            exit;
-        }
+        file_put_contents( $this->setting['master_pid_file'], $server->master_pid);
+        file_put_contents( $this->setting['manager_pid_file'], $server->manager_pid);
         set_process_name($this->setting['master_process_name']);
-        
 
     }
 
@@ -160,13 +152,12 @@ class WebSocket extends SwooleEvent
 
     public function onWorkerStart(\Swoole\Server $server, int $workerId)
     {
-        if($workerId > $this->swoole_set['worker_num']){
+        if($workerId > $this->swoole_set['setting']['worker_num']){
             set_process_name($this->setting['task_process_name'] . $workerId);
         }else{
             set_process_name($this->setting['worker_process_name'] . $workerId);
+            $this->_route = \Pingo\Http\Route::getInstance();
         }
-
-        $this->_route = \Pingo\Http\Route::getInstance();
 
     }
 

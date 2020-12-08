@@ -213,6 +213,7 @@ WELCOME;
                 Manager::getInstance()->setSetting($servers);
                 if($action === "start"){
                     Manager::getInstance()->createSwooleServer();
+                    Manager::getInstance()->start();
                 }elseif ($action === "stop") {
                     # code...
                     Manager::getInstance()->stop();
