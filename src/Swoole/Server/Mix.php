@@ -5,7 +5,7 @@ use Pingo\Traits\Singleton;
 use Pingo\Component\ConsoleTools;
 use Pingo\Swoole\SwooleEvent;
 use Pingo\Swoole\Context;
-
+use Pingo\Config\Config;
 
 class Mix extends SwooleEvent
 {
@@ -50,7 +50,19 @@ class Mix extends SwooleEvent
     {
         //注册主服务事件回调
         foreach ($events as  $event){
-            $this->server->on($event, [$this, "on{$event}"]);
+            
+            if($event === "Request"){
+                $route = \Pingo\Http\Route::getInstance();
+                $this->server->on($event, function($request, $response) use($route){
+                    Context::set('Request', $request);
+                    Context::set('Response', $response);
+                    //var_dump($this->_route);
+                    //var_dump($route);
+                    $route->dispatch($request, $response);
+                });
+            }else{
+                $this->server->on($event, [$this, "on{$event}"]);
+            }
         }
     }
 
@@ -156,8 +168,44 @@ class Mix extends SwooleEvent
             set_process_name($this->setting['task_process_name'] . $workerId);
         }else{
             set_process_name($this->setting['worker_process_name'] . $workerId);
+            $database_setting = Config::getInstance()->get("database");
+            $mysql_pool = new \Pingo\Pool\ConnectionPool(
+                [
+                    'minActive'  => $database_setting['pool_min'],
+                    'maxActive'  => $database_setting['pool_max'],
+                    'maxWaitTime' => $database_setting['pool_waittime'],
+                    'maxIdleTime' => $database_setting['pool_idletime'],
+                    'idleCheckInterval' => $database_setting['pool_checkintval'],
+                ],
+                new \Pingo\Pool\Connectors\PDOConnector(),
+                [
+                    'dsn' => "mysql:host={$database_setting['host']};port={$database_setting['port']}dbname={$database_setting['database']}",
+                    'username' => $database_setting['username'],
+                    'password' => $database_setting['password'],
+                    'options'  => $database_setting['options']
+                ]
+            );
+            $mysql_pool->init();
+            \Pingo\Pool\PoolManager::getInstance()->addConnectionPool($database_setting['pool_name'], $mysql_pool);
+
+            $redis_setting = Config::getInstance()->get("redis");
+            $redis_pool = new \Pingo\Pool\ConnectionPool(
+                [
+                    'minActive' => $redis_setting['pool_min'],
+                    'maxActive' => $redis_setting['pool_max'],
+                ],
+                new \Pingo\Pool\Connectors\PhpRedisConnector,
+                [
+                    'host'     => $redis_setting['host'],
+                    'port'     => $redis_setting['port'],
+                    'database' => $redis_setting['db_index'],
+                    'password' => $redis_setting['auth'],
+                ]);
+            $redis_pool->init();
+            \Pingo\Pool\PoolManager::getInstance()->addConnectionPool($redis_setting['pool_name'], $redis_pool);
+
         }
-        $this->_route = \Pingo\Http\Route::getInstance();
+        
 
     }
 
@@ -214,6 +262,7 @@ class Mix extends SwooleEvent
     public function onManagerStart(\Swoole\Server $server)
     {
         set_process_name($this->setting['manager_process_name']);
+        
     }
     
     public function onManagerStop(\Swoole\Server $server)
@@ -234,9 +283,9 @@ class Mix extends SwooleEvent
 
     public function onRequest(\Swoole\Http\Request $request, \Swoole\Http\Response $response)
     {
-        Context::set('Request', $request);
+       /*  Context::set('Request', $request);
         Context::set('Response', $response);
-        $this->_route->dispatch($request, $response);
+        $this->_route->dispatch($request, $response); */
     }
 
     public function onMessage(\Swoole\WebSocket\Server $server, \Swoole\WebSocket\Frame $frame)

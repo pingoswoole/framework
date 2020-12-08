@@ -9,7 +9,6 @@ use InvalidArgumentException;
 use PDO;
 use RuntimeException;
 use Swoole\Coroutine;
-use Pingo\Traits\Singleton;
 
 /*!
  * Medoo database framework
@@ -27,7 +26,7 @@ class Raw
     public $value;
 }
 
-class BaseModel
+class  Model
 {
     protected $pool;
 
@@ -48,15 +47,14 @@ class BaseModel
 
     private $in_transaction = false;
 
-    use Singleton;
+    protected $table;
     
-    public function __construct($config = null)
+    protected $connect_setting = [];
+
+    public function __construct()
     {
-        if (! empty($config)) {
-            $this->pool = \Pingo\Database\PDO::getInstance($config);
-        } else {
-            $this->pool = \Pingo\Database\PDO::getInstance();
-        }
+        $this->connect_setting = \Pingo\Config\Config::getInstance()->get("database");
+        $this->pool = \Pingo\Pool\PoolManager::getInstance()->getConnectionPool($this->connect_setting['pool_name']);
     }
 
     public function beginTransaction()
@@ -1323,7 +1321,7 @@ class BaseModel
     private function realGetConn()
     {
         if (! $this->in_transaction) {
-            $this->pdo = $this->pool->getConnection();
+            $this->pdo = $this->pool->borrow();
             $this->pdo->exec('SET SQL_MODE=ANSI_QUOTES');
         }
     }
@@ -1331,7 +1329,7 @@ class BaseModel
     private function release()
     {
         if (! $this->in_transaction) {
-            $this->pool->close($this->pdo);
+            $this->pool->return($this->pdo);
         }
     }
 
