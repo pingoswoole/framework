@@ -156,8 +156,8 @@ class Mix extends SwooleEvent
             set_process_name($this->setting['task_process_name'] . $workerId);
         }else{
             set_process_name($this->setting['worker_process_name'] . $workerId);
-            $this->_route = \Pingo\Http\Route::getInstance();
         }
+        $this->_route = \Pingo\Http\Route::getInstance();
 
     }
 
