@@ -1,7 +1,7 @@
 <?php
 namespace Pingo\Swoole\Server;
 
-use App\Traits\Singleton;
+use Pingo\Traits\Singleton;
 use Pingo\Component\ConsoleTools;
 use Pingo\Swoole\SwooleEvent;
 

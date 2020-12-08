@@ -1,7 +1,7 @@
 <?php
 namespace Pingo\Swoole\Server;
 
-use App\Traits\Singleton;
+use Pingo\Traits\Singleton;
 use Pingo\Component\ConsoleTools;
 use Pingo\Swoole\SwooleEvent;
 use Pingo\Swoole\Context;
@@ -246,7 +246,7 @@ class WebSocket extends SwooleEvent
         Context::set('Request', $request);
         Context::set('Response', $response);
         $this->_route->dispatch($request, $response);
-        
+
     }
 
     public function onMessage(\Swoole\WebSocket\Server $server, \Swoole\WebSocket\Frame $frame)
