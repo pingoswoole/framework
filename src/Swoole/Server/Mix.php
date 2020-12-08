@@ -179,7 +179,7 @@ class Mix extends SwooleEvent
                 ],
                 new \Pingo\Pool\Connectors\PDOConnector(),
                 [
-                    'dsn' => "mysql:host={$database_setting['host']};port={$database_setting['port']}dbname={$database_setting['database']}",
+                    'dsn' => "mysql:host={$database_setting['host']};port={$database_setting['port']};dbname={$database_setting['database']}",
                     'username' => $database_setting['username'],
                     'password' => $database_setting['password'],
                     'options'  => $database_setting['options']
