@@ -53,8 +53,8 @@ WELCOME;
         ConsoleTools::echo("swoole version", phpversion("swoole"));
         ConsoleTools::echo("php version", phpversion());
         ConsoleTools::echo("pingoswoole version", Constant::VERSION);
-        ConsoleTools::echo("tmp dir", phpversion("swoole"));
-        ConsoleTools::echo("log dir", phpversion("swoole"));
+        ConsoleTools::echo("tmp dir", WEB_TMP_PATH);
+        ConsoleTools::echo("log dir", WEB_LOG_PATH);
             
     }
 
@@ -68,7 +68,7 @@ WELCOME;
      */
     public static function run()
     {
-        self::banner();
+        
 
         if( false === $commonds = ConsoleTools::parseArgs()){
             exit(ConsoleTools::echoError("命令参数错误！！！"));
@@ -83,6 +83,8 @@ WELCOME;
         self::registerExceptionHandler();
         //初始化APP配置
         \App\SwooleEvent::initialize();
+        //WELLCOME
+        self::banner();
         //启动swoole
         self::startServer($commonds[0], $commonds[1], $commonds[2]);
  
@@ -210,7 +212,7 @@ WELCOME;
                 $servers = Config::getInstance()->get("servers");
                 Manager::getInstance()->setSetting($servers);
                 if($action === "start"){
-                    Manager::getInstance()->createSwoole();
+                    Manager::getInstance()->createSwooleServer();
                 }elseif ($action === "stop") {
                     # code...
                     Manager::getInstance()->stop();

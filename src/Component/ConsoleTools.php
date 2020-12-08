@@ -20,7 +20,7 @@ class ConsoleTools
      */
     public static function echo($name, $value)
     {
-        $str = "\33[42m". str_pad($name, 20, STR_PAD_RIGHT) .  " \33[45m\33[37m  {$value}  \33[0m ";
+        $str = "\e[32m". str_pad($name, 30, STR_PAD_RIGHT) .  " \33[45m\33[37m  {$value}  \33[0m ";
         echo $str . PHP_EOL;
     }
 
