@@ -1,7 +1,5 @@
 <?php
-
 namespace Pingo\VerifyCode;
-
 /**
  * 验证码处理类
  */

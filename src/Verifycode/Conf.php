@@ -1,8 +1,5 @@
 <?php
-
 namespace Pingo\VerifyCode;
-
-
 /**
  * 验证码配置文件
  */
