@@ -54,3 +54,53 @@ if (! function_exists('config')) {
 
 }
 
+if(!function_exists("cache")){
+    /**
+     * Redis缓存操作
+     *
+     * @author pingo
+     * @created_at 00-00-00
+     * @param [type] $key
+     * @param [type] $value
+     * @return void
+     */
+    function cache($key = null, $value = null)
+    {
+        $RedisHandler = (new \Pingo\Database\Redis);
+        if(is_null($key)) return $RedisHandler;
+        if(!is_null($value)){
+            return $RedisHandler->set($key, $value);
+        }
+        return $RedisHandler->get($key);
+    }
+}
+
+if(!function_exists("db")){
+    /**
+     * DB
+     *
+     * @author pingo
+     * @created_at 00-00-00
+     * @param [type] $config
+     * @return void
+     */
+    function db($config = null)
+    {
+        return (new \Pingo\Database\DB($config));
+    }
+}
+
+if(!function_exists("model")){
+    /**
+     * model
+     *
+     * @author pingo
+     * @created_at 00-00-00
+     * @param [type] $config
+     * @return void
+     */
+    function model($config = [])
+    {
+        return (new \Pingo\Database\Model($config));
+    }
+}

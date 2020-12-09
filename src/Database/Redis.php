@@ -3,16 +3,18 @@
 declare(strict_types=1);
  
 namespace Pingo\Database;
-
-use Pingo\Traits\Singleton;
+/**
+ * Redis客户端
+ *  调用者避免单例实例化，造成协程混乱
+ * -----------------
+ * @author
+ */
 
 class Redis
 {
     protected $pool;
 
     protected $connection;
-
-    use Singleton;
     
     public function __construct($config = null)
     {

@@ -15,7 +15,7 @@ use Swoole\Coroutine;
  * https://medoo.in
  * Version 1.7.10
  *
- *  
+ *  避免单例实例化，造成协程混乱
  *  
  */
 
