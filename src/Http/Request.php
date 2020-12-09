@@ -130,8 +130,7 @@ class Request
 
     public function _fetchParmas($method = 'get', $key = null, $default = null, $filter = null)
     {
-        if(empty($key)) return $default;
-        if(!is_array($key)) $key = [$key];
+        
         $data   = [];
         $result = [];
         switch ($method) {
@@ -148,6 +147,8 @@ class Request
                 $data = array_merge($this->_get, $this->_post);
                 break;
         }
+        if(empty($key)) return $data;
+        if(!is_array($key)) $key = [$key];
         foreach ($key as $name) {
             # code...
             $result[$name] = $this->_filterParams($data[$name]?? $default, $filter);

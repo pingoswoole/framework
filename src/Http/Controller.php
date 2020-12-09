@@ -41,7 +41,12 @@ abstract class Controller
         $this->swoole_response = $response->getSwooleResponse();
         $this->server   = $server;
         $this->request_server = $request->getServer();
-         
+        $this->initialize(); 
+    }
+
+    public function initialize()
+    {
+        
     }
 
     public function isGet()

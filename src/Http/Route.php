@@ -64,10 +64,9 @@ class Route
          
         switch ($routeInfo[0]) {
             case Dispatcher::NOT_FOUND:
-                return $this->defaultRouter($request, $response, $uri);
+                return $this->defaultRouter($request, $response, $uri, "controllerNotFound");
             case Dispatcher::METHOD_NOT_ALLOWED:
-                $response->status(405);
-                return $response->end();
+                return $this->defaultRouter($request, $response, $uri, "requestMethodForbid");
             case Dispatcher::FOUND:
                 $handler = $routeInfo[1];
                 $vars    = $routeInfo[2];//路由参数 /api/member{id:\d}  [id=1]
@@ -84,14 +83,15 @@ class Route
                         throw new RuntimeException("Route {$uri} defined '{$className}' Class Not Found");
                     }
                      
-                    $controller = new $className($request, $response, Manager::getInstance()->getSwooleServer());
-
-                    if (! method_exists($controller, $func)) {
-                        throw new RuntimeException("Route {$uri} defined '{$func}' Method Not Found");
-                    }
-                    //
                     $Request = new Request($request);
                     $Response = new Response($response);
+                    $controller = new $className($Request, $Response, Manager::getInstance()->getSwooleServer());
+
+                    if (! method_exists($controller, $func)) {
+                        //throw new RuntimeException("Route {$uri} defined '{$func}' Method Not Found");
+                        return $this->defaultRouter($request, $response, $uri, "methodNotFound");
+                    }
+                    //
                     
                     $middlewareHandler = function ($Request, $Response, $vars) use ($controller, $func) {
                         return $controller->{$func}($Request, $Response, $vars ?? null);
@@ -122,8 +122,7 @@ class Route
 
                 throw new RuntimeException("Route {$uri} config error");
             default:
-                $response->status(400);
-                return $response->end();
+                return $this->defaultRouter($request, $response, $uri, "unedfined");
         }
     }
 
@@ -132,16 +131,14 @@ class Route
      * @param $response
      * @param $uri
      */
-    public function defaultRouter($request, $response, $uri)
+    public function defaultRouter($request, $response, $uri, $method = "unedfined")
     {
         $uri = trim($uri, '/');
         $uri = explode('/', $uri);
-
-        if ($uri[0] === '') {
-            $className = '\\App\\Http\\Controllers\\IndexController';
-            if (class_exists($className) && method_exists($className, 'index')) {
-                return (new $className())->index($request, $response);
-            }
+        
+        $className = '\\App\\Http\\Controllers\\DefaultController';
+        if (class_exists($className) && method_exists($className, $method)) {
+            return (new $className())->{$method}($request, $response, $uri, $method);
         }
         
         $response->status(404);
