@@ -5,9 +5,9 @@ namespace Pingo\Database;
 
 use RuntimeException;
 use Swoole\Database\PDOConfig;
-use Swoole\Database\PDOPool;
+use Swoole\Database\PDOPool as SwoolePDOPool;
 
-class PDO
+class PDOPool
 {
     protected $pools;
 
@@ -32,7 +32,7 @@ class PDO
     {
         if (empty($this->pools)) {
             $this->config = array_replace_recursive($this->config, $config);
-            $this->pools = new PDOPool(
+            $this->pools = new SwoolePDOPool(
                 (new PDOConfig())
                     ->withHost($this->config['host'])
                     ->withPort($this->config['port'])
@@ -42,7 +42,7 @@ class PDO
                     ->withUsername($this->config['username'])
                     ->withPassword($this->config['password'])
                     ->withOptions($this->config['options']),
-                $this->config['size']
+                $this->config['pool_size']
             );
         }
     }
@@ -53,7 +53,7 @@ class PDO
             if (empty($config)) {
                 throw new RuntimeException('pdo config empty');
             }
-            if (empty($config['size'])) {
+            if (empty($config['pool_size'])) {
                 throw new RuntimeException('the size of database connection pools cannot be empty');
             }
             self::$instance = new static($config);

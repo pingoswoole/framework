@@ -3,69 +3,144 @@
 declare(strict_types=1);
  
 namespace Pingo\Database;
-
-use RuntimeException;
-use Swoole\Database\RedisConfig;
-use Swoole\Database\RedisPool;
+use Pingo\Traits\Singleton;
 
 class Redis
 {
-    protected $pools;
+    protected $pool;
 
-    protected $config = [
-        'host'      => 'localhost',
-        'port'      => 6379,
-        'auth'      => '',
-        'db_index'  => 0,
-        'time_out'  => 2,
-        'size'      => 60,
-    ];
+    protected $connection;
 
-    private static $instance;
-
-    private function __construct(array $config)
+    use Singleton;
+    
+    public function __construct($config = null)
     {
-        if (empty($this->pools)) {
-            $this->config = array_replace_recursive($this->config, $config);
-            $this->pools = new RedisPool(
-                (new RedisConfig())
-                    ->withHost($this->config['host'])
-                    ->withPort($this->config['port'])
-                    ->withAuth($this->config['auth'])
-                    ->withDbIndex($this->config['db_index'])
-                    ->withTimeout($this->config['time_out']),
-                $this->config['size']
-            );
+        if (! empty($config)) {
+            $this->pool = Redis::getInstance($config);
+        } else {
+            $this->pool = Redis::getInstance();
         }
     }
 
-    public static function getInstance($config = null)
+    public function __call($name, $arguments)
     {
-        if (empty(self::$instance)) {
-            if (empty($config)) {
-                throw new RuntimeException('redis config empty');
-            }
-            if (empty($config['size'])) {
-                throw new RuntimeException('the size of redis connection pools cannot be empty');
-            }
-            self::$instance = new static($config);
+        $this->connection = $this->pool->getConnection();
+
+        try {
+            $data = $this->connection->{$name}(...$arguments);
+        } catch (\RedisException $e) {
+            $this->pool->close(null);
+            throw $e;
         }
 
-        return self::$instance;
+        $this->pool->close($this->connection);
+
+        return $data;
     }
 
-    public function getConnection()
+    public function brPop($keys, $timeout)
     {
-        return $this->pools->get();
+        $this->connection = $this->pool->getConnection();
+
+        if ($timeout === 0) {
+            // TODO Need to optimize...
+            $timeout = 6666;
+        }
+
+        $this->connection->setOption(\Redis::OPT_READ_TIMEOUT, (string) $timeout);
+
+        $data = [];
+
+        try {
+            $start = time();
+            $data = $this->connection->brPop($keys, $timeout);
+        } catch (\RedisException $e) {
+            $end = time();
+            if ($end - $start < $timeout) {
+                $this->pool->close(null);
+                throw $e;
+            }
+        }
+
+        $this->connection->setOption(\Redis::OPT_READ_TIMEOUT, (string) $this->pool->getConfig()['time_out']);
+
+        $this->pool->close($this->connection);
+
+        return $data;
     }
 
-    public function close($connection = null)
+    public function blPop($keys, $timeout)
     {
-        $this->pools->put($connection);
+        $this->connection = $this->pool->getConnection();
+
+        if ($timeout === 0) {
+            // TODO Need to optimize...
+            $timeout = 99999999999;
+        }
+
+        $this->connection->setOption(\Redis::OPT_READ_TIMEOUT, (string) $timeout);
+
+        $data = [];
+
+        try {
+            $start = time();
+            $data = $this->connection->blPop($keys, $timeout);
+        } catch (\RedisException $e) {
+            $end = time();
+            if ($end - $start < $timeout) {
+                $this->pool->close(null);
+                throw $e;
+            }
+        }
+
+        $this->connection->setOption(\Redis::OPT_READ_TIMEOUT, (string) $this->pool->getConfig()['time_out']);
+
+        $this->pool->close($this->connection);
+
+        return $data;
     }
 
-    public function getConfig(): array
+    public function subscribe($channels, $callback)
     {
-        return $this->config;
+        $this->connection = $this->pool->getConnection();
+
+        $this->connection->setOption(\Redis::OPT_READ_TIMEOUT, '-1');
+
+        try {
+            $data = $this->connection->subscribe($channels, $callback);
+        } catch (\RedisException $e) {
+            $this->pool->close(null);
+            throw $e;
+        }
+
+        $this->connection->setOption(\Redis::OPT_READ_TIMEOUT, (string) $this->pool->getConfig()['time_out']);
+
+        $this->pool->close($this->connection);
+
+        return $data;
+    }
+
+    public function brpoplpush($srcKey, $dstKey, $timeout)
+    {
+        $this->connection = $this->pool->getConnection();
+
+        $this->connection->setOption(\Redis::OPT_READ_TIMEOUT, (string) $timeout);
+
+        try {
+            $start = time();
+            $data = $this->connection->brpoplpush($srcKey, $dstKey, $timeout);
+        } catch (\RedisException $e) {
+            $end = time();
+            if ($end - $start < $timeout) {
+                throw $e;
+            }
+            $data = false;
+        }
+
+        $this->connection->setOption(\Redis::OPT_READ_TIMEOUT, (string) $this->pool->getConfig()['time_out']);
+
+        $this->pool->close($this->connection);
+
+        return $data;
     }
 }

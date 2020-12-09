@@ -168,45 +168,12 @@ class Mix extends SwooleEvent
             set_process_name($this->setting['task_process_name'] . $workerId);
         }else{
             set_process_name($this->setting['worker_process_name'] . $workerId);
-            $database_setting = Config::getInstance()->get("database");
-            $mysql_pool = new \Pingo\Pool\ConnectionPool(
-                [
-                    'minActive'  => $database_setting['pool_min'],
-                    'maxActive'  => $database_setting['pool_max'],
-                    'maxWaitTime' => $database_setting['pool_waittime'],
-                    'maxIdleTime' => $database_setting['pool_idletime'],
-                    'idleCheckInterval' => $database_setting['pool_checkintval'],
-                ],
-                new \Pingo\Pool\Connectors\PDOConnector(),
-                [
-                    'dsn' => "mysql:host={$database_setting['host']};port={$database_setting['port']};dbname={$database_setting['database']}",
-                    'username' => $database_setting['username'],
-                    'password' => $database_setting['password'],
-                    'options'  => $database_setting['options']
-                ]
-            );
-            $mysql_pool->init();
-            \Pingo\Pool\PoolManager::getInstance()->addConnectionPool($database_setting['pool_name'], $mysql_pool);
-
-            $redis_setting = Config::getInstance()->get("redis");
-            $redis_pool = new \Pingo\Pool\ConnectionPool(
-                [
-                    'minActive' => $redis_setting['pool_min'],
-                    'maxActive' => $redis_setting['pool_max'],
-                ],
-                new \Pingo\Pool\Connectors\PhpRedisConnector,
-                [
-                    'host'     => $redis_setting['host'],
-                    'port'     => $redis_setting['port'],
-                    'database' => $redis_setting['db_index'],
-                    'password' => $redis_setting['auth'],
-                ]);
-            $redis_pool->init();
-            \Pingo\Pool\PoolManager::getInstance()->addConnectionPool($redis_setting['pool_name'], $redis_pool);
-
         }
-        
-
+        //进程池设置
+        $database_setting = Config::getInstance()->get("database");
+        $redis_setting = Config::getInstance()->get("redis");
+        \Pingo\Database\PDOPool::getInstance($database_setting);
+        \Pingo\Database\RedisPool::getInstance($redis_setting);
     }
 
     public function onWorkerStop(\Swoole\Server $server, int $workerId)

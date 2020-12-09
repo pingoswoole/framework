@@ -51,10 +51,14 @@ class  Model
     
     protected $connect_setting = [];
 
-    public function __construct()
+    public function __construct(array $config = [])
     {
-        $this->connect_setting = \Pingo\Config\Config::getInstance()->get("database");
-        $this->pool = \Pingo\Pool\PoolManager::getInstance()->getConnectionPool($this->connect_setting['pool_name']);
+        //$this->connect_setting = \Pingo\Config\Config::getInstance()->get("database");
+        if (! empty($config)) {
+            $this->pool = \Pingo\Database\PDOPool::getInstance($config);
+        } else {
+            $this->pool = \Pingo\Database\PDOPool::getInstance();
+        }
     }
 
     public function beginTransaction()
@@ -1321,7 +1325,7 @@ class  Model
     private function realGetConn()
     {
         if (! $this->in_transaction) {
-            $this->pdo = $this->pool->borrow();
+            $this->pdo = $this->pool->getConnection();
             $this->pdo->exec('SET SQL_MODE=ANSI_QUOTES');
         }
     }
@@ -1329,7 +1333,7 @@ class  Model
     private function release()
     {
         if (! $this->in_transaction) {
-            $this->pool->return($this->pdo);
+            $this->pool->close($this->pdo);
         }
     }
 

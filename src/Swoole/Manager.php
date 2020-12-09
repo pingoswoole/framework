@@ -83,8 +83,10 @@ class Manager implements Factory
 
     public function start()
     {
-        $this->isStart = true;
-        $this->swooleServer->start();
+        if(!$this->isStart){
+            $this->isStart = true;
+            $this->swooleServer->start();
+        }
     }
 
     public function stop()

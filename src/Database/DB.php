@@ -21,9 +21,9 @@ class DB
     public function __construct($config = null)
     {
         if (! empty($config)) {
-            $this->pool = \Pingo\Database\PDO::getInstance($config);
+            $this->pool = \Pingo\Database\PDOPOOL::getInstance($config);
         } else {
-            $this->pool = \Pingo\Database\PDO::getInstance();
+            $this->pool = \Pingo\Database\PDOPOOL::getInstance();
         }
     }
 
