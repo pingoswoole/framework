@@ -75,7 +75,9 @@ abstract class Controller
 
     public function writeJson(array $data)
     {
-        $this->response->writeJson($data);
+        if(!is_string($data)) $data = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $this->response->header('Content-type', 'application/json');
+        $this->response->write($data);
     }
     /**
      * 异常处理
@@ -88,14 +90,7 @@ abstract class Controller
        // throw new HttpException($this->response, $msg, $code);
     }
 
-    /**
-     * @param $data
-     * @return string
-     */
-    protected function json($data)
-    {
-        return $this->response->json($data);
-    }
+   
 
     /**
      * @param $data
