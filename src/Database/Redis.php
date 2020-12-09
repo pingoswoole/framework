@@ -3,6 +3,7 @@
 declare(strict_types=1);
  
 namespace Pingo\Database;
+
 use Pingo\Traits\Singleton;
 
 class Redis
@@ -16,9 +17,9 @@ class Redis
     public function __construct($config = null)
     {
         if (! empty($config)) {
-            $this->pool = Redis::getInstance($config);
+            $this->pool = RedisPool::getInstance($config);
         } else {
-            $this->pool = Redis::getInstance();
+            $this->pool = RedisPool::getInstance();
         }
     }
 
@@ -28,7 +29,7 @@ class Redis
 
         try {
             $data = $this->connection->{$name}(...$arguments);
-        } catch (\RedisException $e) {
+        } catch (\Exception $e) {
             $this->pool->close(null);
             throw $e;
         }

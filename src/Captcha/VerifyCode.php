@@ -1,5 +1,5 @@
 <?php
-namespace Pingo\VerifyCode;
+namespace Pingo\Captcha;
 /**
  * 验证码处理类
  */
