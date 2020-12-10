@@ -102,7 +102,7 @@ class Request
                 return $this->route_params;
                 break;
             case 1:
-                return $this->route_params[$param]?? null;
+                return $this->route_params[array_shift($param)]?? null;
                 break;
             default:
                 $data = [];
