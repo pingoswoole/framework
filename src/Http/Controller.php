@@ -28,6 +28,7 @@ abstract class Controller
     protected $request_server = [];
 
     protected $middleware = [];
+
     /**
      * Controller constructor.
      * @param $request

@@ -42,6 +42,7 @@ class Request
      */
     protected $response;
 
+    protected $route_params = [];
 
     public function bootstrap()
     {
@@ -59,7 +60,7 @@ class Request
     /**
      * @param SwRequest  $request
      */
-    public function __construct(SwRequest $request)
+    public function __construct(SwRequest $request, $vars = [])
     {
         isset($request->headers) && $this->_headers = $request->header;
         isset($request->get) && $this->_get = $request->get;
@@ -71,6 +72,7 @@ class Request
         $this->clientIP = $request->server["remote_addr"];
         $this->serverPort = $request->server["server_port"];
         $this->swoole_request = $request;
+        $this->route_params = $vars;
         
     }
 
@@ -84,7 +86,35 @@ class Request
         //
         return $data;
     }
-
+    /**
+     * 获取路由参数
+     *
+     * @author pingo
+     * @created_at 00-00-00
+     * @param [type] ...$param
+     * @return void
+     */
+    public function route(...$param)
+    {
+        switch (count($param)) {
+            case 0:
+                # code...
+                return $this->route_params;
+                break;
+            case 1:
+                return $this->route_params[$param]?? null;
+                break;
+            default:
+                $data = [];
+                foreach ($param as $key => $name) {
+                    # code...
+                    $data[$name] = $this->route_params[$name]?? null;
+                }
+                # code...
+                return $data;
+                break;
+        }
+    }
     /**
      * @param null $key
      * @param null $default
@@ -96,7 +126,7 @@ class Request
         return $this->_fetchParmas('get', $key, $default, $filter);
     }
 
-
+    
     /**
      * @param null $key
      * @param null $default

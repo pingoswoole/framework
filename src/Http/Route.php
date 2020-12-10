@@ -49,7 +49,7 @@ class Route
         }
         return self::$instance;
     }
-
+ 
      /**
      * @param $request
      * @param $response
@@ -83,7 +83,7 @@ class Route
                         throw new RuntimeException("Route {$uri} defined '{$className}' Class Not Found");
                     }
                      
-                    $Request = new Request($request);
+                    $Request = new Request($request, $vars);
                     $Response = new Response($response);
                     $controller = new $className($Request, $Response, Manager::getInstance()->getSwooleServer());
 
