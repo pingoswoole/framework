@@ -94,6 +94,12 @@ class Request extends ServerRequest
         //
         return $data;
     }
+
+    public function setRouteParams($params = [])
+    {
+        $this->route_params = array_merge($this->route_params, $params);
+    }
+    
     /**
      * 获取路由参数
      *

@@ -71,6 +71,8 @@ class Route
             case Dispatcher::FOUND:
                 $handler = $routeInfo[1];
                 $vars    = $routeInfo[2];//路由参数 /api/member{id:\d}  [id=1]
+                $request->setRouteParams($vars);
+
                 if (is_string($handler)) {
                     $handler = explode('@', $handler);
                     if (count($handler) !== 2) {
@@ -93,7 +95,7 @@ class Route
                             array_push($allow_methods,$item->getName());
                         }
                         if(in_array($func,$allow_methods)){
-                            $RefClassObj = $RefClass->newInstanceArgs([$request, $response, Manager::getInstance()->getSwooleServer(), $vars]);
+                            $RefClassObj = $RefClass->newInstanceArgs([$request, $response, Manager::getInstance()->getSwooleServer()]);
                             $befor_method = "onRequest";
                             if($RefClass->hasMethod($befor_method)){
                                 $befor_method_handler = $RefClass->getMethod($befor_method);
