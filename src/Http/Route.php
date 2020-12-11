@@ -170,9 +170,9 @@ class Route
         if (class_exists($className) && method_exists($className, $method)) {
             return (new $className())->{$method}($request, $response, $uri, $method);
         }
-
-        $response->withStatus(404);
-        return $response->end("404");
+        
+        //$response->status(404);
+        //return $response->end("404");
     }
 
     /**

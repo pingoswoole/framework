@@ -71,16 +71,16 @@ abstract class Controller
     public function write($data)
     {
         if(!is_string($data)) $data = json_encode($data);
-        $this->response->write($data);
+        $this->swoole_response->write($data);
     }
 
     public function writeJson(array $data)
     {
         if(!is_string($data)) $data = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        $this->response->withHeader('Content-type', 'application/json');
-        $this->response->write($data);
+        $this->swoole_response->withHeader('Content-type', 'application/json');
+        $this->swoole_response->write($data);
     }
     
-    
+
 
 }

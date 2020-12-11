@@ -15,7 +15,7 @@ class Response extends MessageResponse
 
     protected $request = null;
 
-    protected $swResponse = null;
+    protected $response = null;
 
     const STATUS_NOT_END = 0;
     const STATUS_LOGICAL_END = 1;
@@ -43,7 +43,7 @@ class Response extends MessageResponse
      */
      public function __construct(\Swoole\Http\Response $response)
     {
-        $this->swResponse = $response;
+        $this->response = $response;
         parent::__construct();
         $this->withAddedHeader('Server','PingoSwoole');
     }
@@ -128,7 +128,7 @@ class Response extends MessageResponse
 
     function getSwooleResponse()
     {
-        return $this->swResponse;
+        return $this->response;
     }
 
 
