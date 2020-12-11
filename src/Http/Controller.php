@@ -50,6 +50,20 @@ abstract class Controller
         
     }
 
+    public function request()
+    {
+        return $this->request;
+    }
+    public function response()
+    {
+        return $this->response;
+    }
+
+    public function getSwooleServer()
+    {
+        return $this->server;
+    }
+
     public function isGet()
     {
         return $this->request_server['request_method'] === 'GET' ? true : false;
