@@ -3,9 +3,13 @@ namespace Pingo\Swoole\Server;
 
 use Pingo\Traits\Singleton;
 use Pingo\Component\ConsoleTools;
+use Pingo\Component\Di;
 use Pingo\Swoole\SwooleEvent;
 use Pingo\Swoole\Context;
 use Pingo\Config\Config;
+use Pingo\Http\Request;
+use Pingo\Http\Response;
+use Pingo\Swoole\Constant;
 
 class Mix extends SwooleEvent
 {
@@ -52,14 +56,40 @@ class Mix extends SwooleEvent
         foreach ($events as  $event){
             
             if($event === "Request"){
+
                 $route = \Pingo\Http\Route::getInstance();
-                $this->server->on($event, function($request, $response) use($route){
+                $requestHook = Di::getInstance()->get(Constant::HTTP_GLOBAL_ON_REQUEST);
+                $afterRequestHook = Di::getInstance()->get(Constant::HTTP_GLOBAL_AFTER_REQUEST);
+                 
+                $this->server->on($event, function($request, $response) use($route, $requestHook, $afterRequestHook){
                     Context::set('Request', $request);
                     Context::set('Response', $response);
-                    //var_dump($this->_route);
                     //var_dump($route);
-                    $route->dispatch($request, $response);
+                    $request_psr = new Request($request);
+                    $response_psr = new Response($response);
+                    try {
+                        $ret = null;
+                        if (is_callable($requestHook)) {
+                            $ret = call_user_func($requestHook, $request_psr, $response_psr);
+                        }
+                        if ($ret !== false) {
+                            $route->dispatch($request, $response);
+                        }
+                    } catch (\Throwable $throwable) {
+                        call_user_func(Di::getInstance()->get(Constant::HTTP_EXCEPTION_HANDLER), $throwable, $request_psr, $response_psr);
+                    } finally {
+                        try {
+                            if (is_callable($afterRequestHook)) {
+                                call_user_func($afterRequestHook, $request_psr, $response_psr);
+                            }
+                        } catch (\Throwable $throwable) {
+                            call_user_func(Di::getInstance()->get(Constant::HTTP_EXCEPTION_HANDLER), $throwable, $request_psr, $response_psr);
+                        }
+                    }
+                    $response_psr->__response();
+                    
                 });
+
             }else{
                 $this->server->on($event, [$this, "on{$event}"]);
             }

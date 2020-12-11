@@ -2,8 +2,9 @@
  
 namespace Pingo\Http;
 
-
-class Response
+use Pingo\Http\Message\Response as MessageResponse;
+use Pingo\Http\Message\Status;
+class Response extends MessageResponse
 {
 
     protected $headers = ['Server' => 'PingoSwoole'];
@@ -16,6 +17,13 @@ class Response
 
     protected $swResponse = null;
 
+    const STATUS_NOT_END = 0;
+    const STATUS_LOGICAL_END = 1;
+    const STATUS_REAL_END = 2;
+    const STATUS_RESPONSE_DETACH = 3;
+    private $sendFile = null;
+    private $isEndResponse = self::STATUS_NOT_END;//1 逻辑end  2真实end 3分离响应
+    private $isChunk = false;
     /**
      * 防止XSS跨站攻击 ，默认开启 .
      * @var bool
@@ -33,147 +41,137 @@ class Response
      *
      * @param \Swoole\Http\Response $response
      */
-    public function __construct(\Swoole\Http\Response $response)
+     public function __construct(\Swoole\Http\Response $response)
     {
         $this->swResponse = $response;
+        parent::__construct();
+        $this->withAddedHeader('Server','PingoSwoole');
     }
 
-    public function addHeader(array $headers)
-    {
-        // 第一个字母大写
-        foreach ($headers as $key => $value) {
-            $headers [ strtolower(str_replace('_', '-', $key)) ] = $value;
-        }
-        $this->headers = array_merge($this->headers, $headers);
-
-        return $this;
+    public function end(){
+        $this->isEndResponse = self::STATUS_LOGICAL_END;
     }
-
-    /**
-     * @param $key
-     * @return $this
-     */
-    public function deleteHeader($key)
+    function __response():bool
     {
-        if (array_key_exists($key, $this->headers)) {
-            unset($this->headers[ $key ]);
-        }
-
-        return $this;
-    }
-
-    /**
-     * @return array
-     */
-    public function getHeader()
-    {
-        return $this->headers;
-    }
-
-    /**
-     * @param string $key
-     * @param string $value
-     * @param int    $expire
-     * @param string $path
-     * @param string $domain
-     * @param bool   $secure
-     * @param bool   $httponly
-     * @return $this
-     */
-    public function addCookie(string $key, string $value = '', int $expire = 0, string $path = '/', string $domain = '', bool $secure = false, bool $httponly = false)
-    {
-        $this->cookies [] = ['key'      => $key,
-                             'value'    => $value,
-                             'expire'   => $expire,
-                             'path'     => $path,
-                             'domain'   => $domain,
-                             'secure'   => $secure,
-                             'httponly' => $httponly,
-        ];
-
-        return $this;
-    }
-
-    /**
-     * @param $key
-     * @return $this
-     */
-    public function deleteCookie($key)
-    {
-        if (array_key_exists($key, $this->cookies)) {
-            unset($this->cookies [ $key ]);
-        }
-
-        return $this;
-    }
-
-    /**
-     * @return array
-     */
-    public function getCookie(): array
-    {
-        return $this->cookies;
-    }
-
-    public function setStatucCode(int $code)
-    {
-        $this->statusCode = $code;
-    }
-
-
-    public function sendHeader()
-    {
-        foreach ($this->getHeader() as $key => $value) {
-            $this->swResponse->header($key, $value);
-        }
-    }
-
-    public function sendCookies()
-    {
-        if(!empty($this->cookies))
-        {
-            foreach ($this->cookies as $key => $val)
-            {
-                $this->swResponse->cookie(
-                    $val ['key'] ,
-                    $val ['value'],
-                    (int) $val ['expire'],
-                    $val ['path'] === '' ? '/' : $val ['path'] ,
-                    $val ['domain'] === '' ? '' : $val ['domain'] ,
-                    false ,
-                    false
-                );
+        if($this->isEndResponse <= self::STATUS_REAL_END){
+            $this->isEndResponse = self::STATUS_REAL_END;
+            //结束处理
+            $status = $this->getStatusCode();
+            $this->response->status($status);
+            $headers = $this->getHeaders();
+            foreach ($headers as $header => $val){
+                foreach ($val as $sub){
+                    $this->response->header($header,$sub);
+                }
             }
+            $cookies = $this->getCookies();
+            foreach ($cookies as $cookie){
+                $this->response->cookie(...$cookie);
+            }
+            $write = $this->getBody()->__toString();
+            if($write !== '' && $this->isChunk){
+                $this->response->write($write);
+                $write = null;
+            }
+
+            if($this->sendFile != null){
+                $this->response->sendfile($this->sendFile);
+            }else{
+                $this->response->end($write);
+            }
+            return true;
+        }else{
+            return false;
         }
     }
 
-    public function sendStatus()
+    function isEndResponse()
     {
-        $this->swResponse->status(200);
+        return $this->isEndResponse;
     }
 
-    public function write($text)
-    {
-        $this->swResponse->write($text);
+    function write(string $str){
+        if(!$this->isEndResponse()){
+            $this->getBody()->write($str);
+            return true;
+        }else{
+            return false;
+        }
     }
 
-    public function getSwooleResponse()
+    function redirect($url,$status = Status::CODE_MOVED_TEMPORARILY)
+    {
+        if(!$this->isEndResponse()){
+            //仅支持header重定向  不做meta定向
+            $this->withStatus($status);
+            $this->withHeader('Location',$url);
+            return true;
+        }else{
+            return false;
+        }
+    }
+
+    /*
+     * 目前swoole不支持同键名的header   因此只能通过别的方式设置多个cookie
+     */
+    public function setCookie(string $name, $value = null, $expire = null,string $path = '/',string $domain = '',bool $secure = false,bool $httponly = false,string $samesite = ''){
+        if(!$this->isEndResponse()){
+            $this->withAddedCookie([
+                $name,$value,$expire,$path,$domain,$secure,$httponly,$samesite
+            ]);
+            return true;
+        }else{
+            return false;
+        }
+
+    }
+
+    function getSwooleResponse()
     {
         return $this->swResponse;
     }
 
 
-    /**
-     * @param mixed $data
-     * @param int $code
-     * @param null|string $callback
-     * @return string
-     */
-    public function json($data)
+    function sendFile(string $sendFilePath)
     {
-        $this->swResponse->header('Content-type', 'application/json');
-        $this->write(json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+        $this->sendFile = $sendFilePath;
     }
 
+    public function detach():?int
+    {
+        $fd = $this->response->fd;
+        $this->isEndResponse = self::STATUS_RESPONSE_DETACH;
+        $this->response->detach();
+        return $fd;
+    }
+
+    /**
+     * @param bool $isChunk
+     */
+    public function setIsChunk(bool $isChunk): void
+    {
+        $this->isChunk = $isChunk;
+    }
+
+    static function createFromFd(int $fd):Response
+    {
+        $resp = \Swoole\Http\Response::create($fd);
+        return new Response($resp);
+    }
+
+    final public function __toString():string
+    {
+        // TODO: Implement __toString() method.
+        return Utility::toString($this);
+    }
+
+    public function __destruct()
+    {
+        // TODO: Implement __destruct() method.
+        $this->getBody()->close();
+    }
+     
+ 
+     
 
 }

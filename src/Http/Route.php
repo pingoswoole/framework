@@ -91,9 +91,39 @@ class Route
                         //throw new RuntimeException("Route {$uri} defined '{$func}' Method Not Found");
                         return $this->defaultRouter($request, $response, $uri, "methodNotFound");
                     }
-                    //
                     
-                    $middlewareHandler = function ($Request, $Response, $vars) use ($controller, $func) {
+                    try {
+                        //code...
+                        $RefClass = new \ReflectionClass($className);
+                        $public_methods = $RefClass->getMethods(\ReflectionMethod::IS_PUBLIC);
+                        $allow_methods = [];
+                        foreach ($public_methods as $item){
+                            array_push($allow_methods,$item->getName());
+                        }
+                        if(in_array($func,$allow_methods)){
+                            $RefClassObj = $RefClass->newInstanceArgs([$Request, $Response, Manager::getInstance()->getSwooleServer()]);
+                            $befor_method = "onRequest";
+                            if($RefClass->hasMethod($befor_method)){
+                                $befor_method_handler = $RefClass->getMethod($befor_method);
+                                $befor_method_handler->setAccessible(true);
+                                $before_res = $befor_method_handler->invokeArgs($RefClassObj, [$func]);
+                                if(false === $before_res) return;
+                                $action_handler = $RefClass->getMethod($func);
+                                $action_handler->invokeArgs($RefClassObj, [$Request, $Response, $vars]);
+                            }
+                            //
+                        }else{
+                            return $this->defaultRouter($request, $response, $uri, "methodNotFound");
+                        }
+                    } catch (\Throwable $th) {
+                        //throw $th;
+                        return $this->defaultRouter($request, $response, $uri, "controllerNotFound");
+                    }
+                    
+                    return ;
+                    //
+                    //去掉中间件、 
+                    /* $middlewareHandler = function ($Request, $Response, $vars) use ($controller, $func) {
                         return $controller->{$func}($Request, $Response, $vars ?? null);
                     };
 
@@ -113,7 +143,7 @@ class Route
                         }
                     }
                    
-                    return $middlewareHandler($Request, $Response, $vars ?? null);
+                    return $middlewareHandler($Request, $Response, $vars ?? null); */
                 }
 
                 if (is_callable($handler)) {
@@ -140,8 +170,8 @@ class Route
         if (class_exists($className) && method_exists($className, $method)) {
             return (new $className())->{$method}($request, $response, $uri, $method);
         }
-        
-        $response->status(404);
+
+        $response->withStatus(404);
         return $response->end("404");
     }
 

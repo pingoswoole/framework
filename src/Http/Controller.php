@@ -77,47 +77,10 @@ abstract class Controller
     public function writeJson(array $data)
     {
         if(!is_string($data)) $data = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        $this->response->header('Content-type', 'application/json');
+        $this->response->withHeader('Content-type', 'application/json');
         $this->response->write($data);
     }
-    /**
-     * 异常处理
-     * @param $msg
-     * @param int $code
-     * @throws HttpException
-     */
-    protected function error($msg, $code = 400)
-    {
-       // throw new HttpException($this->response, $msg, $code);
-    }
-
-   
-
-    /**
-     * @param $data
-     * @param string $callback
-     * @return string
-     */
-    protected function jsonP($data, $callback = 'callback')
-    {
-        return $this->response->json($data, 0, $callback);
-    }
-
-    /**
-     * 检查必填字段
-     * @param array $fields
-     * @param array $data
-     * @throws HttpException
-     */
-    protected function verify($fields, $data)
-    {
-        foreach ($fields as $v) {
-            $val = array_get($data, $v);
-            if ($val === null || $val === '') {
-                $this->error("{$v}不能为空");
-            }
-        }
-    }
-
+    
+    
 
 }

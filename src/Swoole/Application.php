@@ -83,11 +83,11 @@ WELCOME;
         self::registerExceptionHandler();
         //初始化APP配置
         \App\SwooleEvent::initialize();
-        //WELLCOME
-        self::banner();
         //启动swoole
         self::startServer($commonds[0], $commonds[1], $commonds[2]);
- 
+        //WELLCOME
+        self::banner();
+
     }
     /**
      * 环境检查
@@ -239,6 +239,8 @@ WELCOME;
                                                     
             default:
                 # code...
+                ConsoleTools::echoError("Please use server:start | task | process | config |crontab");
+                exit();
                 break;
         }
     }
