@@ -93,7 +93,7 @@ class Route
                             array_push($allow_methods,$item->getName());
                         }
                         if(in_array($func,$allow_methods)){
-                            $RefClassObj = $RefClass->newInstanceArgs([$request, $response, Manager::getInstance()->getSwooleServer()]);
+                            $RefClassObj = $RefClass->newInstanceArgs([$request, $response, Manager::getInstance()->getSwooleServer(), $vars]);
                             $befor_method = "onRequest";
                             if($RefClass->hasMethod($befor_method)){
                                 $befor_method_handler = $RefClass->getMethod($befor_method);
