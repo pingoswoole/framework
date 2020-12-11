@@ -56,10 +56,11 @@ class Route
      * @throws \Exception
      * @return mixed|void
      */
-    public function dispatch(\Swoole\Http\Request $request, \Swoole\Http\Response $response)
+    public function dispatch(\Pingo\Http\Request $request, \Pingo\Http\Response $response)
     {
-        $method = $request->server['request_method'] ?? 'GET';
-        $uri = $request->server['request_uri'] ?? '/';
+        $request_server = $request->getServer();
+        $method = $request_server['request_method'] ?? 'GET';
+        $uri    = $request_server['request_uri'] ?? '/';
         $routeInfo = self::$dispatcher->dispatch($method, $uri);
          
         switch ($routeInfo[0]) {
@@ -82,15 +83,6 @@ class Route
                     if (! class_exists($className)) {
                         throw new RuntimeException("Route {$uri} defined '{$className}' Class Not Found");
                     }
-                     
-                    $Request = new Request($request, $vars);
-                    $Response = new Response($response);
-                    $controller = new $className($Request, $Response, Manager::getInstance()->getSwooleServer());
-
-                    if (! method_exists($controller, $func)) {
-                        //throw new RuntimeException("Route {$uri} defined '{$func}' Method Not Found");
-                        return $this->defaultRouter($request, $response, $uri, "methodNotFound");
-                    }
                     
                     try {
                         //code...
@@ -101,7 +93,7 @@ class Route
                             array_push($allow_methods,$item->getName());
                         }
                         if(in_array($func,$allow_methods)){
-                            $RefClassObj = $RefClass->newInstanceArgs([$Request, $Response, Manager::getInstance()->getSwooleServer()]);
+                            $RefClassObj = $RefClass->newInstanceArgs([$request, $response, Manager::getInstance()->getSwooleServer()]);
                             $befor_method = "onRequest";
                             if($RefClass->hasMethod($befor_method)){
                                 $befor_method_handler = $RefClass->getMethod($befor_method);
@@ -109,7 +101,7 @@ class Route
                                 $before_res = $befor_method_handler->invokeArgs($RefClassObj, [$func]);
                                 if(false === $before_res) return;
                                 $action_handler = $RefClass->getMethod($func);
-                                $action_handler->invokeArgs($RefClassObj, [$Request, $Response, $vars]);
+                                $action_handler->invokeArgs($RefClassObj, [$request, $response, $vars]);
                             }
                             //
                         }else{
@@ -171,8 +163,8 @@ class Route
             return (new $className())->{$method}($request, $response, $uri, $method);
         }
         
-        //$response->status(404);
-        //return $response->end("404");
+        $response->withStatus(404);
+        return $response->end("404");
     }
 
     /**

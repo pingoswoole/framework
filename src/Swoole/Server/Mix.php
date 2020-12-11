@@ -73,7 +73,7 @@ class Mix extends SwooleEvent
                             $ret = call_user_func($requestHook, $request_psr, $response_psr);
                         }
                         if ($ret !== false) {
-                            $route->dispatch($request, $response);
+                            $route->dispatch($request_psr, $response_psr);
                         }
                     } catch (\Throwable $throwable) {
                         call_user_func(Di::getInstance()->get(Constant::HTTP_EXCEPTION_HANDLER), $throwable, $request_psr, $response_psr);
