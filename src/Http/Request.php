@@ -309,46 +309,7 @@ class Request extends ServerRequest
     {
         return $this->_method;
     }
-
-    /**
-     * @param array $method
-     */
-    public function setMethod($method)
-    {
-        $this->_method = $method;
-    }
-
-    /**
-     * @return array
-     */
-    public function getHeaders()
-    {
-        return $this->_headers;
-    }
-
-    /**
-     * @param array $headers
-     */
-    public function setHeaders($headers)
-    {
-        $this->_headers = $headers;
-    }
-
-    /**
-     * @return array
-     */
-    public function getSession()
-    {
-        return $this->_session;
-    }
-
-    /**
-     * @param array $session
-     */
-    public function setSession($session)
-    {
-        $this->_session = $session;
-    }
+ 
 
     /**
      * @return null
@@ -365,22 +326,7 @@ class Request extends ServerRequest
     {
         $this->_server = $server;
     }
-
-    /**
-     * @return Router
-     */
-    public function getRouter()
-    {
-        return $this->router;
-    }
-
-    /**
-     * @param Router $router
-     */
-    public function setRouter($router)
-    {
-        $this->router = $router;
-    }
+ 
 
     function getRequestParam(...$key)
     {
