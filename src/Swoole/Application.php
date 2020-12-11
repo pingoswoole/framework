@@ -85,8 +85,7 @@ WELCOME;
         \App\SwooleEvent::initialize();
         //启动swoole
         self::startServer($commonds[0], $commonds[1], $commonds[2]);
-        //WELLCOME
-        self::banner();
+        
 
     }
     /**
@@ -212,6 +211,8 @@ WELCOME;
                 $servers = Config::getInstance()->get("servers");
                 Manager::getInstance()->setSetting($servers);
                 if($action === "start"){
+                    //WELLCOME
+                    self::banner();
                     Manager::getInstance()->createSwooleServer();
                     Manager::getInstance()->start();
                 }elseif ($action === "stop") {
