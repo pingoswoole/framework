@@ -1,35 +1,90 @@
 <?php
+namespace Pingo\Facades;
 
-namespace One\Facades;
-
-abstract class Facade
+use Pingo\Container\Container;
+/**
+ * Facade管理类
+ */
+class Facade
 {
-    private static $accessor = [];
+    /**
+     * 始终创建新的对象实例
+     * @var bool
+     */
+    protected static $alwaysNewInstance;
 
-    abstract protected static function getFacadeAccessor();
-
-    protected static function initArgs()
+    /**
+     * 创建Facade实例
+     * @static
+     * @access protected
+     * @param  string $class       类名或标识
+     * @param  array  $args        变量
+     * @param  bool   $newInstance 是否每次创建新的实例
+     * @return object
+     */
+    protected static function createFacade(string $class = '', array $args = [], bool $newInstance = false)
     {
-        return [];
-    }
+        $class = $class ?: static::class;
 
-    public static function __callStatic($method, $parameters)
-    {
-        return self::getObject()->$method(...$parameters);
-    }
+        $facadeClass = static::getFacadeClass();
 
-    public static function getObject()
-    {
-        $cl = static::getFacadeAccessor();
-        if (!isset(self::$accessor[$cl])) {
-            self::$accessor[$cl] = new $cl(...static::initArgs());
+        if ($facadeClass) {
+            $class = $facadeClass;
         }
-        return self::$accessor[$cl];
+
+        if (static::$alwaysNewInstance) {
+            $newInstance = true;
+        }
+
+        return Container::getInstance()->make($class, $args, $newInstance);
     }
 
-    public static function clear($class)
+    /**
+     * 获取当前Facade对应类名
+     * @access protected
+     * @return string
+     */
+    protected static function getFacadeClass()
+    {}
+
+    /**
+     * 带参数实例化当前Facade类
+     * @access public
+     * @return object
+     */
+    public static function instance(...$args)
     {
-        unset(self::$accessor[$class]);
+        if (__CLASS__ != static::class) {
+            return self::createFacade('', $args);
+        }
     }
 
+    /**
+     * 调用类的实例
+     * @access public
+     * @param  string     $class       类名或者标识
+     * @param  array|true $args        变量
+     * @param  bool       $newInstance 是否每次创建新的实例
+     * @return object
+     */
+    public static function make(string $class, $args = [], $newInstance = false)
+    {
+        if (__CLASS__ != static::class) {
+            return self::__callStatic('make', func_get_args());
+        }
+
+        if (true === $args) {
+            // 总是创建新的实例化对象
+            $newInstance = true;
+            $args        = [];
+        }
+
+        return self::createFacade($class, $args, $newInstance);
+    }
+
+    // 调用实际类的方法
+    public static function __callStatic($method, $params)
+    {
+        return call_user_func_array([static::createFacade(), $method], $params);
+    }
 }

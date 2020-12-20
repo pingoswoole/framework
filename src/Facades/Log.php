@@ -1,6 +1,6 @@
 <?php
 
-namespace One\Facades;
+namespace Pingo\Facades;
 
 /**
  * Class Log

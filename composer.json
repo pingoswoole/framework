@@ -30,7 +30,7 @@
         "ext-swoole": ">=4.5.0",
         "duncan3dc/blade": "^4.10",
         "nikic/fast-route": "^1.3",
-        "topthink/think-validate": "^2.0",
+        "psr/container": "~1.0",
         "hashids/hashids": "^4.1",
         "intervention/image": "^2.5",
         "phpoffice/phpspreadsheet": "^1.15",
