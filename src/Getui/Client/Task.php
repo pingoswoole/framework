@@ -1,7 +1,7 @@
 <?php
-namespace Pingo\GeTui\Client;
+namespace Pingo\Getui\Client;
 
-use Pingo\GeTui\ApiException;
+use Pingo\Getui\ApiException;
 
 class Task extends Entity
 {

@@ -1,14 +1,14 @@
 <?php
-namespace Pingo\GeTui\Client;
+namespace Pingo\Getui\Client;
 
-use Pingo\GeTui\Api;
-use Pingo\GeTui\ApiException;
-use Pingo\GeTui\Template\Link;
-use Pingo\GeTui\Template\Message;
-use Pingo\GeTui\Template\Notification;
-use Pingo\GeTui\Template\Notypopload;
-use Pingo\GeTui\Template\PushInfo;
-use Pingo\GeTui\Template\Style;
+use Pingo\Getui\Api;
+use Pingo\Getui\ApiException;
+use Pingo\Getui\Template\Link;
+use Pingo\Getui\Template\Message;
+use Pingo\Getui\Template\Notification;
+use Pingo\Getui\Template\Notypopload;
+use Pingo\Getui\Template\PushInfo;
+use Pingo\Getui\Template\Style;
 
 class Entity
 {

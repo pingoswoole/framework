@@ -1,5 +1,5 @@
 <?php
-namespace Pingo\GeTui\Client;
+namespace Pingo\Getui\Client;
 
 class Single extends Entity
 {

@@ -1,5 +1,5 @@
 <?php
-namespace Pingo\GeTui;
+namespace Pingo\Getui;
 
 class ApiException extends \Exception
 {

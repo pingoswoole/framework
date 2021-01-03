@@ -1,9 +1,9 @@
 <?php
-namespace Pingo\GeTui;
+namespace Pingo\Getui;
 
-use Pingo\GeTui\Client\Batch;
-use Pingo\GeTui\Client\Single;
-use Pingo\GeTui\Client\Task;
+use Pingo\Getui\Client\Batch;
+use Pingo\Getui\Client\Single;
+use Pingo\Getui\Client\Task;
 
 class Client
 {

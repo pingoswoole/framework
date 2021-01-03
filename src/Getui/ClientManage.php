@@ -1,5 +1,5 @@
 <?php
-namespace Pingo\GeTui;
+namespace Pingo\Getui;
 
 use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 use GuzzleHttp\Client as HttpClient;

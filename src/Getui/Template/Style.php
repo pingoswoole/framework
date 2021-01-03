@@ -1,5 +1,5 @@
 <?php
-namespace Pingo\GeTui\Template;
+namespace Pingo\Getui\Template;
 
 /**
  * 安卓通知样式实体类

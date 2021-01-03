@@ -1,5 +1,5 @@
 <?php
-namespace Pingo\GeTui;
+namespace Pingo\Getui;
 
 /**
  * Class Api

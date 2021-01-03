@@ -1,5 +1,5 @@
 <?php
-namespace Pingo\GeTui\Template;
+namespace Pingo\Getui\Template;
 
 class Link
 {
