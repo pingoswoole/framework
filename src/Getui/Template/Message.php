@@ -1,6 +1,4 @@
 <?php
- 
-
 namespace Pingo\GeTui\Template;
 
 class Message

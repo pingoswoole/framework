@@ -1,5 +1,4 @@
 <?php
- 
 namespace Pingo\GeTui\Template;
 
 class Notypopload

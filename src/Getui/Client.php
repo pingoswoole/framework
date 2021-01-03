@@ -1,6 +1,4 @@
 <?php
- 
-
 namespace Pingo\GeTui;
 
 use Pingo\GeTui\Client\Batch;

@@ -1,6 +1,4 @@
 <?php
- 
-
 namespace Pingo\GeTui;
 
 use Symfony\Component\Cache\Adapter\FilesystemAdapter;
