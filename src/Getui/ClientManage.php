@@ -11,7 +11,7 @@ trait ClientManage
      * 请求uri
      * @var string
      */
-    protected $baseUri = 'https://restapi.getui.com/v1/';
+    protected $baseUri = 'https://restapi.getui.com/v2/';
 
     /**
      * 授权token
@@ -58,7 +58,7 @@ trait ClientManage
             return $this->autToken;
         }
         $this->autToken = $this->auth();
-        $auth_token->set('auth_token.' . $this->config['app_id'], $this->autToken, 3600 * 24);
+        $auth_token->set('auth_token.' . $this->config['app_id'], $this->autToken, 3600 * 20);
         return $this->autToken;
     }
 
@@ -69,16 +69,20 @@ trait ClientManage
      */
     public function auth()
     {
+        list($usec, $sec) = explode(" ", microtime());
+        $msectime = floatval($sec . substr($usec, 2, 3));
         $data = [
             'appkey' => $this->config['app_key'],
-            'timestamp' => (int)floor(microtime(true) * 1000),
+            'timestamp' =>  $msectime,
         ];
         $data['sign'] = hash('sha256', "{$data['appkey']}{$data['timestamp']}{$this->config['master_secret']}");
-        $ret = $this->request('POST', $this->baseUri . '/auth_sign', $data, false);
-        if ($ret['result'] != 'ok') {
+       
+        $ret = $this->request('POST', $this->baseUri . '/auth', $data, false);
+         
+        if ($ret['code'] !== 0 && isset($ret['data']['token'])) {
             throw new ApiException('鉴权失败');
         }
-        return $ret['auth_token'];
+        return $ret['data']['token'];
     }
 
     /**
@@ -88,8 +92,9 @@ trait ClientManage
      */
     public function authDestroy()
     {
-        $ret = $this->request('POST', $this->baseUri . '/auth_close', []);
-        if ($ret['result'] != 'ok') {
+        $auth_token = $this->cache->getItem('auth_token.' . $this->config['app_id']);
+        $ret = $this->request('DELETE', $this->baseUri . '/auth/' . $auth_token, []);
+        if ($ret['code'] !== 0 ) {
             return false;
         }
         $this->cache->delete('auth_token.' . $this->config['app_id']);
@@ -108,11 +113,12 @@ trait ClientManage
      */
     protected function request($method, $url, array $data = [], $is_auth = true)
     {
+         
         $client = new HttpClient(['timeout' => 5.0]);
         $response = $client->request($method, $url, [
             'json' => $data,
             'headers' => [
-                'authtoken' => $is_auth ? $this->getAuthToken() : '',
+                'token' => $is_auth ? $this->getAuthToken() : '',
             ]
         ]);
         if ($response->getStatusCode() != 200) {
