@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Pingo\Database;
 
 use PDO;
+use Pingo\Database\QueryBuilder\Builder;
 use RuntimeException;
 use Swoole\Coroutine;
 use Swoole\Database\PDOStatementProxy;
@@ -16,7 +17,11 @@ class DB
     /** @var PDO */
     protected $pdo;
 
+    protected static $builder;
+
     private $in_transaction = false;
+
+    protected static $table = '';
 
     public function __construct($config = null)
     {
@@ -25,6 +30,19 @@ class DB
         } else {
             $this->pool = \Pingo\Database\PDOPOOL::getInstance();
         }
+        //$this->builder = new Builder;
+    }
+
+    public static function getInstance($config = null)
+    {
+        return new static($config);
+    }
+
+    public static function table(string $table)
+    {
+        self::$table = $table;
+        self::$builder = Builder::table($table);
+        return self::getInstance();
     }
 
     public function quote(string $string, int $parameter_type = PDO::PARAM_STR)
@@ -116,13 +134,13 @@ class DB
         return $ret;
     }
 
-    public function insert(string $query, array $bindings = []): int
+    public function insert(array $fields): int
     {
         $this->realGetConn();
-
+        $query = self::$builder->insert($fields);
         $statement = $this->pdo->prepare($query);
 
-        $this->bindValues($statement, $bindings);
+        //$this->bindValues($statement, $bindings);
 
         $statement->execute();
 
@@ -133,7 +151,7 @@ class DB
         return $ret;
     }
 
-    protected function bindValues(PDOStatementProxy $statement, array $bindings): void
+    protected function bindValues(\PDOStatement $statement, array $bindings): void
     {
         foreach ($bindings as $key => $value) {
             $statement->bindValue(
@@ -157,4 +175,37 @@ class DB
             $this->pool->close($this->pdo);
         }
     }
+
+
+    /**
+     * Tunnel any non-existent static calls as object calls on the Connection object.
+     *
+     * @param $method
+     * @param $arguments
+     *
+     * @throws \PDOException
+     *
+     * @return mixed
+     */
+    /* public static function __callStatic($method, $arguments)
+    {
+        try {
+            return static::getConnection()->$method(...$arguments);
+        } catch (\PDOException $e) {
+            die($e->getMessage());
+        }
+    } */
+    
+    public  function __call($method, $arguments)
+    {
+        try {
+            self::$builder->{$method}(...$arguments);
+            return $this;
+        } catch (\Exception $e) {
+             //($e->getMessage());
+             return false;
+        }
+    }
+    
+
 }

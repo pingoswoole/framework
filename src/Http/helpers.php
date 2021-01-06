@@ -104,3 +104,30 @@ if(!function_exists("model")){
         return (new \Pingo\Database\Model($config));
     }
 }
+
+if(!function_exists('line_tohump'))
+{
+    /*
+	 * 下划线转驼峰
+	 */
+    function line_tohump($str = '')
+	{
+		 return  preg_replace_callback('/_+([a-z])/',function($matches){
+			  return strtoupper($matches[1]);
+			}, $str);
+	}
+
+}
+
+if(!function_exists('hump_toline'))
+{
+    /*
+	 * 驼峰转下划线
+	 */
+    function hump_toline($str = '')
+    {
+        return  strtolower(preg_replace('/(?<=[a-z])([A-Z])/', '_$1', $str));
+    }
+}
+    
+	
