@@ -451,7 +451,7 @@ class DB
      * @throws \PDOException
      *
      * @return mixed
-     */
+     */ 
     /* public static function __callStatic($method, $arguments)
     {
         try {

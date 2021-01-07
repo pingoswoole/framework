@@ -1627,7 +1627,7 @@ class  Model
     {
 
     }
-
+ 
     /**
      * 字段属性获取器
      *
@@ -1647,7 +1647,7 @@ class  Model
         }
         return null;
     }
-
+ 
     /**
      * 字段属性设置
      *

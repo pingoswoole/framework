@@ -11,7 +11,7 @@ class Builder
         call_user_func_array(array($query,"from"),$params);
         return $query;
     }
-
+ 
     static function raw($text,$params=null)
     {
         if($params!=null)

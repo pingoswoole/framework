@@ -359,7 +359,7 @@ class SQL
         }
         return $sql;
     }
-
+ 
 
     public function buildQuery()
     {

@@ -772,7 +772,7 @@ class Query
         }
         return $arr;
     }
-
+ 
     public function fill($arr)
     {
         if ($arr!==null) {
