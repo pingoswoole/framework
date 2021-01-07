@@ -4,7 +4,7 @@ namespace Pingo\Database\QueryBuilder;
 
 class Builder 
 {
-    static function table()
+    public  function table()
     {
         $params = func_get_args();
         $query = new Query();
@@ -20,7 +20,7 @@ class Builder
             {
                 if(gettype($value)=="string")
                 {
-                    $value = Builder::escapeString($value);
+                    $value = self::escapeString($value);
                     $text = preg_replace("/\?/", "'$value'", $text, 1);
                 }
                 else

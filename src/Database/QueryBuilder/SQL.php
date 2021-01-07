@@ -315,7 +315,10 @@ class SQL
         
         if (count($this->query->conditions)>0) {
             $sql .= " WHERE ".$this->getWhere($this->query->conditions);
+        }else{
+            throw new \Exception("Update query need where condition");
         }
+
         return $sql;
     }
 
@@ -331,6 +334,8 @@ class SQL
         }
         if (count($this->query->values)>0) {
             $sql .= $this->getInsertValues($this->query->values);
+        }else{
+            throw new \Exception("Insert query need a table fields");
         }
         if (count($this->query->conditions)>0) {
             $sql .= " WHERE ".$this->getWhere($this->query->conditions);
@@ -339,7 +344,7 @@ class SQL
     }
     protected function buildDeleteQuery()
     {
-        $sql .= "DELETE FROM ";
+        $sql = "DELETE FROM ";
         if (count($this->query->tables)==1) {
             $sql .= $this->getFrom(array($this->query->tables[0]));
         } elseif (count($this->query->tables)>1) {
@@ -349,6 +354,8 @@ class SQL
         }
         if (count($this->query->conditions)>0) {
             $sql .= " WHERE ".$this->getWhere($this->query->conditions);
+        }else{
+            throw new \Exception("Delete query need where condition");
         }
         return $sql;
     }

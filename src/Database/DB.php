@@ -10,6 +10,7 @@ use RuntimeException;
 use Swoole\Coroutine;
 use Swoole\Database\PDOStatementProxy;
 
+
 class DB
 {
     protected $pool;
@@ -17,11 +18,13 @@ class DB
     /** @var PDO */
     protected $pdo;
 
-    protected static $builder;
+    protected $builder;
 
     private $in_transaction = false;
 
-    protected static $table = '';
+    protected $table = '';
+
+    protected $hasConnect = false; //是否获取连接
 
     public function __construct($config = null)
     {
@@ -30,19 +33,14 @@ class DB
         } else {
             $this->pool = \Pingo\Database\PDOPOOL::getInstance();
         }
-        //$this->builder = new Builder;
+        
     }
 
-    public static function getInstance($config = null)
+    public function table(string $table)
     {
-        return new static($config);
-    }
-
-    public static function table(string $table)
-    {
-        self::$table = $table;
-        self::$builder = Builder::table($table);
-        return self::getInstance();
+        $this->table =  $table;
+        $this->builder = (new Builder)->table($table);
+        return $this;
     }
 
     public function quote(string $string, int $parameter_type = PDO::PARAM_STR)
@@ -87,9 +85,9 @@ class DB
         $this->realGetConn();
 
         $statement = $this->pdo->prepare($query);
-
-        $this->bindValues($statement, $bindings);
-
+        
+        if($bindings) $this->bindValues($statement, $bindings);
+        
         $statement->execute();
 
         $ret = $statement->fetchAll();
@@ -134,24 +132,255 @@ class DB
         return $ret;
     }
 
+    /**
+     * 添加数据
+     *
+     * @author pingo
+     * @created_at 00-00-00
+     * @param array $fields
+     * @return integer
+     */
     public function insert(array $fields): int
     {
-        $this->realGetConn();
-        $query = self::$builder->insert($fields);
-        $statement = $this->pdo->prepare($query);
+        try {
+            //code...
+            $this->realGetConn();
+            $query = $this->builder->insert($fields)->toSQL(TRUE);
+             
+            $statement = $this->pdo->prepare($query);
+            //$this->bindValues($statement, $bindings);
+            $statement->execute();
 
-        //$this->bindValues($statement, $bindings);
+            $ret = (int) $this->pdo->lastInsertId();
 
-        $statement->execute();
+            $this->release();
 
-        $ret = (int) $this->pdo->lastInsertId();
+            return $ret;
 
-        $this->release();
+        } catch (\Throwable $th) {
+            //throw $th;
+            if($this->hasConnect) $this->release();
+            throw new \Exception($th->getMessage());
+            
+        }
+        
+    }
+    /**
+     * 更新
+     *
+     * @author pingo
+     * @created_at 00-00-00
+     * @param array $data
+     * @return void
+     */
+    public function update(array $data)
+    {
+        try {
+            $sql = $this->builder->update($data)->toSQL(TRUE);
+            $this->realGetConn();
+            $statement = $this->pdo->prepare($sql);
+            $statement->execute();
+            $ret = $statement->rowCount();
+            $this->release();
 
-        return $ret;
+            return $ret;
+            //code...
+        } catch (\Throwable $th) {
+            //throw $th;
+            if($this->hasConnect) $this->release();
+            throw new \Exception($th->getMessage());
+        }
+
+    }
+    /**
+     * 删除
+     *
+     * @author pingo
+     * @created_at 00-00-00
+     * @return void
+     */
+    public function delete()
+    {
+        try {
+            $sql = $this->builder->delete()->toSQL(TRUE);
+            $this->realGetConn();
+            $statement = $this->pdo->prepare($sql);
+            $statement->execute();
+            $ret = $statement->rowCount();
+            $this->release();
+
+            return $ret;
+            //code...
+        } catch (\Throwable $th) {
+            //throw $th;
+            if($this->hasConnect) $this->release();
+            throw new \Exception($th->getMessage());
+        }
+    }
+    /**
+     * 查询第一条记录
+     *
+     * @author pingo
+     * @created_at 00-00-00
+     * @return void
+     */
+    public function first()
+    {
+        try {
+             
+            $sql = $this->builder->first()->toSQL(TRUE);
+            $this->realGetConn();
+
+            $statement = $this->pdo->prepare($sql);
+
+            //$this->bindValues($statement, $bindings);
+
+            $statement->execute();
+
+            $ret = $statement->fetch();
+
+            $this->release();
+
+            return $ret;
+            
+        } catch (\Throwable $th) {
+            //throw $th;
+            if($this->hasConnect) $this->release();
+            throw new \Exception($th->getMessage());
+        }
+    }
+    /**
+     * 查询所有记录
+     *
+     * @author pingo
+     * @created_at 00-00-00
+     * @return void
+     */
+    public function get()
+    {
+        try {
+            $sql = $this->builder->toSQL(TRUE);
+            $this->realGetConn();
+
+            $statement = $this->pdo->prepare($sql);
+
+            //$this->bindValues($statement, $bindings);
+
+            $statement->execute();
+
+            $ret = $statement->fetchAll();
+
+            $this->release();
+
+            return $ret;
+            //code...
+        } catch (\Throwable $th) {
+            //throw $th;
+            if($this->hasConnect) $this->release();
+            throw new \Exception($th->getMessage());
+        }
+    }
+    /**
+     * 字段递增
+     * 
+     * @author pingo
+     * @created_at 00-00-00
+     *  参数  数组形式、字符串    ['money' => 1, 'score' => 2] ('score', 100)
+     * @return void
+     */
+    public function increment()
+    {
+        try {
+
+            $params = func_get_args();
+            switch (count($params)) {
+                case 1:
+                    if (gettype($params[0])=="array") {
+                        foreach ($params[0] as $key => $val) {
+                            $this->builder->increment($key, $val);
+                        }
+                    }else{
+                        throw new \Exception('increment params is error');
+                    }
+                break;
+                case 2:
+                    $this->builder->increment($params[0], $params[1]);
+                    break;
+                case 3:
+                case 4:
+                case 5:
+                     throw new \Exception('increment params is error');
+                break;
+            }
+            
+            $sql = $this->builder->toSQL(TRUE);
+             
+            $this->realGetConn();
+            $statement = $this->pdo->prepare($sql);
+            $statement->execute();
+            $ret = $statement->rowCount();
+
+            $this->release();
+
+            return $ret;
+            //code...
+        } catch (\Throwable $th) {
+            //throw $th;
+            if($this->hasConnect) $this->release();
+            throw new \Exception($th->getMessage());
+        }
     }
 
-    protected function bindValues(\PDOStatement $statement, array $bindings): void
+    /**
+     * 递减字段
+     *
+     * @author pingo
+     * @created_at 00-00-00
+     * @return void
+     */
+    public function decrement()
+    {
+        try {
+            $params = func_get_args();
+            switch (count($params)) {
+                case 1:
+                    if (gettype($params[0])=="array") {
+                        foreach ($params[0] as $key => $val) {
+                            $this->builder->decrement($key, $val);
+                        }
+                    }else{
+                        throw new \Exception('decrement params is error');
+                    }
+                break;
+                case 2:
+                    $this->builder->decrement($params[0], $params[1]);
+                    break;
+                case 3:
+                case 4:
+                case 5:
+                     throw new \Exception('decrement params is error');
+                break;
+            }
+            
+            $sql = $this->builder->toSQL(TRUE);
+             
+            $this->realGetConn();
+            $statement = $this->pdo->prepare($sql);
+            $statement->execute();
+            $ret = $statement->rowCount();
+
+            $this->release();
+
+            return $ret;
+            //code...
+        } catch (\Throwable $th) {
+            //throw $th;
+            if($this->hasConnect) $this->release();
+            throw new \Exception($th->getMessage());
+        }
+    }
+
+    protected function bindValues(PDOStatementProxy $statement, array $bindings): void
     {
         foreach ($bindings as $key => $value) {
             $statement->bindValue(
@@ -166,6 +395,7 @@ class DB
     {
         if (! $this->in_transaction) {
             $this->pdo = $this->pool->getConnection();
+            $this->hasConnect = true;
         }
     }
 
@@ -173,10 +403,45 @@ class DB
     {
         if (! $this->in_transaction) {
             $this->pool->close($this->pdo);
+            $this->hasConnect = false;
         }
     }
 
+    /**
+     * 统计
+     *
+     * @author pingo
+     * @created_at 00-00-00
+     * @param string $method
+     * @param string $field
+     * @return void
+     */
+    public function aggregate(string $method, string $field = '')
+    {
+        try {
+            $sql = $this->builder->toSQL(TRUE);
+            
+            $this->realGetConn();
+            
+            $statement = $this->pdo->prepare($sql);
 
+            //$this->bindValues($statement, $bindings);
+
+            $statement->execute();
+
+            $ret = $statement->fetch();
+
+            $this->release();
+
+            $value = array_pop($ret);
+            return $value ? floatval($value) : 0;
+            //code...
+        } catch (\Throwable $th) {
+            //throw $th;
+            if($this->hasConnect) $this->release();
+            throw new \Exception($th->getMessage());
+        }
+    }
     /**
      * Tunnel any non-existent static calls as object calls on the Connection object.
      *
@@ -199,7 +464,12 @@ class DB
     public  function __call($method, $arguments)
     {
         try {
-            self::$builder->{$method}(...$arguments);
+            if(in_array($method, ['count', 'sum', 'avg', 'max', 'min'])){
+                $this->builder->{$method}(...$arguments);
+                return $this->aggregate($method, ...$arguments);
+            }else{
+                $this->builder->{$method}(...$arguments);
+            }
             return $this;
         } catch (\Exception $e) {
              //($e->getMessage());

@@ -10,6 +10,8 @@ use PDO;
 use RuntimeException;
 use Swoole\Coroutine;
 
+use Pingo\Database\QueryBuilder\Builder;
+
 /*!
  * Medoo database framework
  * https://medoo.in
@@ -25,6 +27,8 @@ class Raw
 
     public $value;
 }
+
+//abstract class Model implements Arrayable, ArrayAccess, Jsonable, JsonSerializable, QueueableEntity, UrlRoutable
 
 class  Model
 {
@@ -45,20 +49,71 @@ class  Model
 
     protected $errorInfo;
 
-    private $in_transaction = false;
 
-    protected $table;
+    protected $last_sql = ''; //最后执行sql
+
+    private   $in_transaction = false;
+
+    protected $table = '';
     
-    protected $connect_setting = [];
+    protected $attributes = []; //属性
+
+    protected $builder;
+
+    protected $is_connect = false; //是否获取连接
+
+    protected $casts = []; //integer，float，double，，string，boolean，object，array， datetime 
+    /**
+     * Indicates if the model exists.
+     *
+     * @var bool
+     */
+    public $exists = false;
+
+    /**
+     * The primary key for the model.
+     *
+     * @var string
+     */
+    protected $primaryKey = 'id';
+
+    /**
+     * The "type" of the primary key ID.
+     *
+     * @var string
+     */
+    protected $keyType = 'int';
+     /**
+     * The name of the "created at" column.
+     *
+     * @var string|null
+     */
+    const CREATED_AT = 'created_at';
+
+    /**
+     * The name of the "updated at" column.
+     *
+     * @var string|null
+     */
+    const UPDATED_AT = 'updated_at';
+
+
 
     public function __construct(array $config = [])
     {
-        //$this->connect_setting = \Pingo\Config\Config::getInstance()->get("database");
+        
         if (! empty($config)) {
             $this->pool = \Pingo\Database\PDOPool::getInstance($config);
         } else {
             $this->pool = \Pingo\Database\PDOPool::getInstance();
         }
+        if(empty($this->table)){
+            $model_name = (new \ReflectionClass(get_called_class()))->getShortName();
+            $this->table = \hump_toline($model_name);
+        }
+         
+        $this->builder = (new Builder)->table($this->table);
+
     }
 
     public function beginTransaction()
@@ -1327,6 +1382,7 @@ class  Model
         if (! $this->in_transaction) {
             $this->pdo = $this->pool->getConnection();
             $this->pdo->exec('SET SQL_MODE=ANSI_QUOTES');
+            $this->is_connect = true;
         }
     }
 
@@ -1334,6 +1390,7 @@ class  Model
     {
         if (! $this->in_transaction) {
             $this->pool->close($this->pdo);
+            $this->is_connect = false;
         }
     }
 
@@ -1351,4 +1408,261 @@ class  Model
 
         return is_numeric($number) ? $number + 0 : $number;
     }
+
+    /**
+     * 格式化数据
+     *
+     * @author pingo
+     * @created_at 00-00-00
+     * @param array $data
+     * @return array
+     */
+    private function _casts(array $data):array
+    {
+         if($this->casts){
+             foreach ($this->casts as $key => $type) {
+                 # code...integer，float，double，，string，boolean，object，array， datetime 
+                 if(isset($data[$key])){
+                     switch ($type) {
+                        case 'integer':
+                            # code...
+                            $data[$key] = intval($data[$key]);
+                            break;
+                        case 'float':
+                             # code...
+                             $data[$key] = floatval($data[$key]);
+                             break;
+                         case 'double':
+                             # code...
+                             $data[$key] = doubleval($data[$key]);
+                             break;
+                         case 'string':
+                             # code...
+                             $data[$key] = "" . $data[$key];
+                             break;
+                         case 'boolean':
+                             # code...
+                             $data[$key] = boolval($data[$key]);
+                             break;
+                         case 'object':
+                            # code...
+                            $data[$key] = serialize($data[$key]);
+                            break;
+                         case 'array':
+                             # code...
+                             $data[$key] = json_encode($data[$key]);
+                             break;
+                         case 'datetime':
+                            # code...
+                            $data[$key] = strtotime($data[$key]);
+                            break;
+                            
+                         default:
+                             # code...
+                             break;
+                     }
+                 }
+             }
+         }
+
+         return $data;
+    }
+    /**
+     * 新增或修改
+     *
+     * @author pingo
+     * @created_at 00-00-00
+     * @return void
+     */
+    public function save()
+    {
+        try {
+            //修改
+            $this->realGetConn();
+
+            if($this->exists){
+                //是否存在主键
+                if(isset($this->attributes[$this->primaryKey])){
+                    $this->last_sql = $this->builder->update($this->attributes)->toSQL(TRUE);
+                }
+                throw new \Exception("主键不存在：{$this->primaryKey}");
+            }else{
+                //新增
+                if(empty($this->attributes)) throw new \Exception("新增数据不能为空");
+                $this->last_sql = $this->builder->insert($this->attributes)->toSQL(TRUE);
+            }
+            $statement = $this->pdo->prepare($this->last_sql);
+            $execute = $statement->execute();
+            $this->errorInfo = $statement->errorInfo();
+
+            if($this->exists){
+                $result = $this->pdo->lastInsertId();
+            }else{
+                $result = $statement->rowCount();
+            }
+
+            $this->release();
+            return $result;
+
+        } catch (\Throwable $th) {
+            //throw $th;
+            if($this->is_connect) $this->release();
+            throw new \Exception($th->getMessage());
+        }
+
+    }
+
+    public function create(array $data = [])
+    {
+        try {
+            //code...
+            if(empty($data)) throw new \Exception("新增数据不能为空");
+            foreach ($data as $key => $value) {
+                # 修改器
+                
+            }
+        } catch (\Throwable $th) {
+            //throw $th;
+            if($this->is_connect) $this->release();
+            throw new \Exception($th->getMessage());
+        }
+        
+    }
+
+    public function update()
+    {
+
+    }
+
+    public function delete()
+    {
+
+    }
+    public function first()
+    {
+
+    }
+
+    public function get()
+    {
+
+    }
+
+    public function with(array $relations = [])
+    {
+        //
+        foreach ($relations as $key => $method) {
+            # code...
+            if(\method_exists($this, $method)){
+                $this->{$method};
+            }
+        }
+        
+        return $this;
+    }
+
+    /**
+     * 一对一
+     *
+     * @author pingo
+     * @created_at 00-00-00
+     * @param [type] $relationClass
+     * @param [type] $foreign_key
+     * @param [type] $local_key
+     * @return boolean
+     */
+    protected function hasOne($relationClass, $foreign_key, $local_key)
+    {   
+        return $this->hasOne('App\Models\Phone', 'foreign_key', 'local_key');
+    }
+    
+    /**
+     * 一对多
+     *
+     * @author pingo
+     * @created_at 00-00-00
+     * @param [type] $relationClass
+     * @param [type] $foreign_key
+     * @param [type] $local_key
+     * @return boolean
+     */
+    protected function hasMany($relationClass, $foreign_key, $local_key)
+    {   
+        return $this->hasMany('App\Models\Comment', 'foreign_key', 'local_key');
+    }
+
+    /**
+     * 反向  一对一 一对多
+     *
+     * @author pingo
+     * @created_at 00-00-00
+     * @param [type] $relationClass
+     * @param [type] $foreign_key
+     * @param [type] $other_key
+     * @return void
+     */
+    protected function belongsTo($relationClass, $foreign_key, $other_key)
+    {   
+        return $this->belongsTo('App\Models\User', 'foreign_key', 'other_key');
+    }
+
+    /**
+     * 多对多
+     *
+     * @author pingo
+     * @created_at 00-00-00
+     * @param [type] $relationClass
+     * @param [type] $role_user
+     * @param [type] $user_id
+     * @param [type] $role_id
+     * @return void
+     */
+    protected function belongsToMany($relationClass, $role_user, $user_id, $role_id)
+    {   
+        return $this->belongsToMany('App\Models\Role', 'role_user', 'user_id', 'role_id');
+    }
+
+
+    public function __call($method, $args)
+    {
+
+    }
+
+    /**
+     * 字段属性获取器
+     *
+     * @author pingo
+     * @created_at 00-00-00
+     * @param string $name
+     * @return void
+     */
+    public function __get(string $name)
+    {
+        if(isset($this->attributes[$name])){
+            $value = $this->attributes[$name];
+            //是否有获取器
+            $get_method_name =  "get" . \ucfirst(line_tohump($name)) . "Attribute";
+            if( \method_exists($this, $get_method_name) )  $value = \call_user_func_array([$this, $get_method_name], [$value, $this->attributes]);
+            return $value;
+        }
+        return null;
+    }
+
+    /**
+     * 字段属性设置
+     *
+     * @author pingo
+     * @created_at 00-00-00
+     * @param string $name
+     * @param [type] $value
+     */
+    public function __set(string $name, $value)
+    {
+        //是否有修改器
+        $set_method_name =  "set" . \ucfirst(line_tohump($name)) . "Attribute";
+        if( \method_exists($this, $set_method_name) )  $value = \call_user_func([$this, $set_method_name], $value);
+        $this->attributes[$name] = $value;
+    }
+
+
 }

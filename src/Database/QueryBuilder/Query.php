@@ -654,31 +654,35 @@ class Query
         return $this;
     }
     //-------------------//
-    public function insert($values)
+    public function insert(array $values)
     {
+        if(empty($values)) throw new \Exception('Insert field is empty');
         $this->type = "insert";
         $this->values = array_merge($this->values, $values);
         return $this;
     }
 
-    public function update($values)
+    public function update(array $values)
     {
+        if(empty($values)) throw new \Exception('Update field is empty');
         $this->type = "update";
         $this->values = array_merge($this->values, $values);
         return $this;
     }
 
-    public function decrement($name, $value=1)
+    public function decrement(string $name, int $value = 1)
     {
+        if(empty($name)) throw new \Exception('decrement field is empty');
         $this->type = "update";
-        $this->values[$name] = array($name,"-",$value);
+        $this->values[$name] = array($name, "-", $value);
         return $this;
     }
 
-    public function increment($name, $value=1)
+    public function increment(string $name, int $value = 1)
     {
+        if(empty($name)) throw new \Exception('increment field is empty');
         $this->type = "update";
-        $this->values[$name] = array($name,"+",$value);
+        $this->values[$name] = array($name, "+", $value);
         return $this;
     }
     
@@ -707,22 +711,26 @@ class Query
         return $this;
     }
     //------------------//
-    public function toSQL($quoteIdentifier=false)
+    public function toSQL($quoteIdentifier = false)
     {
         $interpreter = new SQL($this, $quoteIdentifier);
         return $interpreter->buildQuery();
     }
-    public function toMySQL($quoteIdentifier=false)
+
+    public function toMySQL($quoteIdentifier = false)
     {
         $interpreter = new MySQL($this, $quoteIdentifier);
         return $interpreter->buildQuery();
     }
-    public function toPostgreSQL($quoteIdentifier=false)
+
+    public function toPostgreSQL($quoteIdentifier = false)
     {
         $interpreter = new PostgreSQL($this, $quoteIdentifier);
         return $interpreter->buildQuery();
     }
-    public function toSQLServer($quoteIdentifier=false)
+
+
+    public function toSQLServer($quoteIdentifier = false)
     {
         $interpreter = new SQLServer($this, $quoteIdentifier);
         return $interpreter->buildQuery();
