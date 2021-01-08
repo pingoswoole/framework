@@ -129,5 +129,16 @@ if(!function_exists('hump_toline'))
         return  strtolower(preg_replace('/(?<=[a-z])([A-Z])/', '_$1', $str));
     }
 }
-    
-	
+
+/**
+ * 是否关联数组
+ *
+ * @author pingo
+ * @created_at 00-00-00
+ * @param array $var
+ * @return boolean
+ */
+function is_assoc_array(array $var)  
+{  
+    return array_diff_assoc(array_keys($var), range(0, sizeof($var))) ? TRUE : FALSE;  
+}  
