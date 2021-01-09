@@ -62,14 +62,20 @@ class Query
     public function select()
     {
         $params = func_get_args();
-        foreach ($params as $columnName) {
-            array_push($this->columns, array($columnName));
+        if(!empty($params)){
+            
+            foreach ($params as $columnName) {
+                if(empty($columnName)) continue;
+                array_push($this->columns, array($columnName));
+            }
         }
         return $this;
     }
     public function selectRaw($text, $params=array())
     {
-        array_push($this->columns, array(Builder::raw($text, $params)));
+        if(!empty($text)){
+            array_push($this->columns, array(Builder::raw($text, $params)));
+        }
         return $this;
     }
 
