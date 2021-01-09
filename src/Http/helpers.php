@@ -90,20 +90,7 @@ if(!function_exists("db")){
     }
 }
 
-if(!function_exists("model")){
-    /**
-     * model
-     *
-     * @author pingo
-     * @created_at 00-00-00
-     * @param [type] $config
-     * @return void
-     */
-    function model($config = [])
-    {
-        return (new \Pingo\Database\Model($config));
-    }
-}
+ 
 
 if(!function_exists('line_tohump'))
 {
