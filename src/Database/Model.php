@@ -9,6 +9,7 @@ use InvalidArgumentException;
 use PDO;
 use RuntimeException;
 use Swoole\Coroutine;
+use Swoole\Database\PDOStatementProxy;
 
 use Pingo\Database\QueryBuilder\Builder;
 
@@ -99,7 +100,13 @@ class  Model
      */
     const UPDATED_AT = 'updated_at';
 
+    //const DELETED_AT = 'deleted_at'; //软删除
+
+    protected $timestamps = true; //新增自动添加 created_at、修改增加 updated_at
+
     protected $_result = []; //最后查询结果集
+
+    protected $_sql = [];
 
     /**
      * 
@@ -184,13 +191,33 @@ class  Model
         return false;
     }
 
-    public function query($query, $map = [])
+    public function query($query, $bindings = [])
     {
-        $raw = $this->raw($query, $map);
+        $this->realGetConn();
 
-        $query = $this->buildRaw($raw, $map);
+        $statement = $this->pdo->prepare($query);
+        
+        if($bindings) $this->bindValues($statement, $bindings);
+        
+        $statement->execute();
 
-        return $this->exec($query, $map);
+        $ret = $statement->fetchAll();
+
+        $this->release();
+
+        return $ret;
+        
+    }
+
+    protected function bindValues(PDOStatementProxy $statement, array $bindings): void
+    {
+        foreach ($bindings as $key => $value) {
+            $statement->bindValue(
+                is_string($key) ? $key : $key + 1,
+                $value,
+                is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR
+            );
+        }
     }
 
     public function exec($query, $map = [])
@@ -262,6 +289,7 @@ class  Model
         return $raw;
     }
 
+
     public function quote($string)
     {
         $this->realGetConn();
@@ -270,6 +298,10 @@ class  Model
         return $ret;
     }
 
+    public function _sql()
+    {
+        return $this->_sql;
+    }
     
 
     public function drop($table)
@@ -318,6 +350,9 @@ class  Model
             $this->pool->close($this->pdo);
             $this->is_connect = false;
         }
+        $this->builder = (new Builder)->table($this->table);
+        //写日记
+        app_log( implode('##', $this->_sql) );
     }
  
     /**
@@ -448,16 +483,34 @@ class  Model
         }
 
     }
-
+    /**
+     * 新增
+     *
+     * @author pingo
+     * @created_at 00-00-00
+     * @param array $data
+     * @return void
+     */
     public function create(array $data = [])
     {
         try {
             //code...
             if(empty($data)) throw new \Exception("新增数据不能为空");
-            foreach ($data as $key => $value) {
-                # 修改器
-                
-            }
+            $data = $this->_casts($data, 1);
+            if($this->timestamps) $data[self::CREATED_AT] = time();
+            $sql = $this->builder->insert($data)->toSQL(true);
+            $this->_sql[] = $sql;
+            $this->realGetConn();
+            $statement = $this->pdo->prepare($sql);
+            //$this->bindValues($statement, $bindings);
+            $statement->execute();
+
+            $ret = (int) $this->pdo->lastInsertId();
+
+            $this->release();
+
+            return $ret;
+            
         } catch (\Throwable $th) {
             //throw $th;
             if($this->is_connect) $this->release();
@@ -471,17 +524,100 @@ class  Model
         return $this->create($data);
     }
 
-    public function update()
+    /**
+     * 更新
+     *
+     * @author pingo
+     * @created_at 00-00-00
+     * @param array $data
+     * @return void
+     */
+    public function update(array $data = [])
     {
+        try {
+            if(empty($data)) throw new \Exception("新增数据不能为空");
+            $sql = $this->builder->update($data)->toSQL(TRUE);
+            $this->_sql[] = $sql;
+            $this->realGetConn();
+            $statement = $this->pdo->prepare($sql);
+            $statement->execute();
+            $ret = $statement->rowCount();
+            $this->release();
 
+            return $ret;
+            //code...
+        } catch (\Throwable $th) {
+            //throw $th;
+            if($this->hasConnect) $this->release();
+            throw new \Exception($th->getMessage());
+        }
     }
-
+    /**
+     * 删除
+     *
+     * @author pingo
+     * @created_at 00-00-00
+     * @return void
+     */
     public function delete()
     {
+        try {
+             
+            $sql = $this->builder->delete()->toSQL(TRUE);
+            $this->_sql[] = $sql;
+            $this->realGetConn();
+            $statement = $this->pdo->prepare($sql);
+            $statement->execute();
+            $ret = $statement->rowCount();
+            $this->release();
 
+            return $ret;
+            //code...
+        } catch (\Throwable $th) {
+            //throw $th;
+            if($this->hasConnect) $this->release();
+            throw new \Exception($th->getMessage());
+        }
     }
+
     public function first()
     {
+        try {
+            //code...
+            $this->realGetConn();
+            
+            $sql = $this->builder->toSQL(true);
+            $this->_sql[] = $sql;
+            $statement = $this->pdo->prepare($sql);
+            //$this->bindValues($statement, $bindings);
+            $statement->execute();
+            
+            $this->_result = $statement->fetch();
+            if($this->_result){
+                 //关联查询
+                if($this->with){
+                    foreach ($this->with as $key => $method) {
+                        # code...
+                        if(is_callable($method)) $method = $key;
+                        
+                        if(\method_exists($this, $method)){
+                            $this->{$method}();
+                        }
+                    }
+                }
+                //转换格式
+                $this->_result = $this->_casts($this->_result, 0);
+
+            }
+            
+            $this->release();
+            
+            return $this->_result;
+        } catch (\Throwable $th) {
+            //throw $th;
+            if($this->is_connect) $this->release();
+            throw new \Exception($th->getMessage());
+        }
 
     }
 
@@ -492,6 +628,7 @@ class  Model
             $this->realGetConn();
             
             $sql = $this->builder->toSQL(true);
+            $this->_sql[] = $sql;
             $statement = $this->pdo->prepare($sql);
             //$this->bindValues($statement, $bindings);
             $statement->execute();
@@ -605,6 +742,7 @@ class  Model
         }
         $builder->whereIn($foreign_key, $local_keys);
         $sql = $builder->toSQL(true);
+        $this->_sql[] = $sql;
         $statement = $this->pdo->prepare($sql);
         //$this->bindValues($statement, $bindings);
         $statement->execute();
@@ -667,6 +805,7 @@ class  Model
         }
         $builder->whereIn($foreign_key, $local_keys);
         $sql = $builder->toSQL(true);
+        $this->_sql[] = $sql;
         $statement = $this->pdo->prepare($sql);
         //$this->bindValues($statement, $bindings);
         $statement->execute();
@@ -785,6 +924,7 @@ class  Model
         }
         $builder->rightJoin($piovtClass->table, "{$table}.{$relationClass->primaryKey}", '=', "{$piovtClass->table}.{$pivot_right_id}")->whereIn("{$piovtClass->table}.{$pivot_left_id}", $local_keys);
         $sql = $builder->toSQL(true);
+        $this->_sql[] = $sql;
         $statement = $this->pdo->prepare($sql);
         //$this->bindValues($statement, $bindings);
         $statement->execute();
@@ -821,7 +961,7 @@ class  Model
     {
         try {
             $sql = $this->builder->toSQL(TRUE);
-            
+            $this->_sql[] = $sql;
             $this->realGetConn();
             
             $statement = $this->pdo->prepare($sql);

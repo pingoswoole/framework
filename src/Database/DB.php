@@ -26,6 +26,8 @@ class DB
 
     protected $hasConnect = false; //是否获取连接
 
+    protected $_sql = [];
+
     public function __construct($config = null)
     {
         if (! empty($config)) {
@@ -85,7 +87,7 @@ class DB
         $this->realGetConn();
 
         $statement = $this->pdo->prepare($query);
-        
+        $this->_sql[] = $query;
         if($bindings) $this->bindValues($statement, $bindings);
         
         $statement->execute();
@@ -146,7 +148,7 @@ class DB
             //code...
             $this->realGetConn();
             $query = $this->builder->insert($fields)->toSQL(TRUE);
-             
+            $this->_sql[] = $query; 
             $statement = $this->pdo->prepare($query);
             //$this->bindValues($statement, $bindings);
             $statement->execute();
@@ -177,6 +179,7 @@ class DB
     {
         try {
             $sql = $this->builder->update($data)->toSQL(TRUE);
+            $this->_sql[] = $sql; 
             $this->realGetConn();
             $statement = $this->pdo->prepare($sql);
             $statement->execute();
@@ -203,6 +206,7 @@ class DB
     {
         try {
             $sql = $this->builder->delete()->toSQL(TRUE);
+            $this->_sql[] = $sql; 
             $this->realGetConn();
             $statement = $this->pdo->prepare($sql);
             $statement->execute();
@@ -229,8 +233,8 @@ class DB
         try {
              
             $sql = $this->builder->first()->toSQL(TRUE);
+            $this->_sql[] = $sql; 
             $this->realGetConn();
-
             $statement = $this->pdo->prepare($sql);
 
             //$this->bindValues($statement, $bindings);
@@ -260,6 +264,7 @@ class DB
     {
         try {
             $sql = $this->builder->toSQL(TRUE);
+            $this->_sql[] = $sql; 
             $this->realGetConn();
 
             $statement = $this->pdo->prepare($sql);
@@ -314,7 +319,7 @@ class DB
             }
             
             $sql = $this->builder->toSQL(TRUE);
-             
+            $this->_sql[] = $sql; 
             $this->realGetConn();
             $statement = $this->pdo->prepare($sql);
             $statement->execute();
@@ -363,7 +368,7 @@ class DB
             }
             
             $sql = $this->builder->toSQL(TRUE);
-             
+            $this->_sql[] = $sql; 
             $this->realGetConn();
             $statement = $this->pdo->prepare($sql);
             $statement->execute();
@@ -405,6 +410,7 @@ class DB
             $this->pool->close($this->pdo);
             $this->hasConnect = false;
         }
+        $this->builder = (new Builder)->table($this->table);
     }
 
     /**
@@ -420,7 +426,7 @@ class DB
     {
         try {
             $sql = $this->builder->toSQL(TRUE);
-            
+            $this->_sql[] = $sql; 
             $this->realGetConn();
             
             $statement = $this->pdo->prepare($sql);
@@ -451,7 +457,7 @@ class DB
      * @throws \PDOException
      *
      * @return mixed
-     */ 
+     */
     /* public static function __callStatic($method, $arguments)
     {
         try {

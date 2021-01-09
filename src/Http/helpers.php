@@ -141,4 +141,59 @@ if(!function_exists('hump_toline'))
 function is_assoc_array(array $var)  
 {  
     return array_diff_assoc(array_keys($var), range(0, sizeof($var))) ? TRUE : FALSE;  
-}  
+}
+
+
+if (!function_exists('env_get')) {
+
+    /**
+     * 获取根目录.env配置项
+     *
+     * @author pingo
+     * @created_at 00-00-00
+     * @param [type] $name
+     * @param [type] $default
+     * @return void
+     */
+    function env_get($name, $default = null)
+    {
+        $file = PINGSWOOLE_WEB_ROOT . '/.env';
+        $configs = parse_ini_file($file, true);
+        if (empty($configs)) {
+            return $default;
+        }
+         // 判断 是否加了注释 # 并且判断是否设置【章节】即是否是二维数组
+         foreach ($configs as $key => $val) {
+            if (is_array($val)) {
+                foreach ($val as $k => $v) {
+                    if (substr($k, 0, 1) == '#' || substr($key, 0, 2) == '//') {
+                    unset($configs[$key][$k]);
+                    }
+                    // 如果传了$name 字段，那么根据name获取指定的字段值
+                    if ($k == $name && !empty($name)) {
+                        return isset($configs[$key][$k]) ? $configs[$key][$k] : null;
+                    }
+                }
+            } else {
+                if (substr($key, 0, 1) == '#' || substr($key, 0, 2) == '//') {
+                unset($configs[$key]);
+                }
+            // 如果传了$name 字段，那么根据name获取指定的字段值
+            if ($key == $name && !empty($name)) {
+                return isset($configs[$key]) ? $configs[$key] : null;
+            }
+         }
+      }
+      return ($default) ;
+
+    }
+}
+
+
+if(!function_exists('app_log'))
+{
+    function app_log($msg = '')
+    {
+        (new Logger(WEB_LOG_PATH))->log($msg);
+    }
+}

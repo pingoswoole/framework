@@ -55,7 +55,7 @@ WELCOME;
         ConsoleTools::echo("pingoswoole version", Constant::VERSION);
         ConsoleTools::echo("tmp dir", WEB_TMP_PATH);
         ConsoleTools::echo("log dir", WEB_LOG_PATH);
-            
+        //ConsoleTools::echo("listen port", WEB_LOG_PATH);
     }
 
      
@@ -209,6 +209,9 @@ WELCOME;
             case 'server':
                 # code...
                 $servers = Config::getInstance()->get("servers");
+                $daemonize = false;
+                if(in_array('-d', $options)) $daemonize = true;
+                $servers['protocol'][\Pingo\Swoole\Constant::SWOOLE_WEBSOCKET_SERVER]['setting']['daemonize'] = $daemonize;
                 Manager::getInstance()->setSetting($servers);
                 if($action === "start"){
                     //WELLCOME
