@@ -106,7 +106,7 @@ class  Model
 
     protected $_result = []; //最后查询结果集
 
-    protected $_sql = [];
+    protected $_sql = []; //执行sql语句
 
     /**
      * 
