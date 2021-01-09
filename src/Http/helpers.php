@@ -194,6 +194,6 @@ if(!function_exists('app_log'))
 {
     function app_log($msg = '')
     {
-        (new Logger(WEB_LOG_PATH))->log($msg);
+        (new \Pingo\Log\Logger(WEB_LOG_PATH))->log($msg);
     }
 }
