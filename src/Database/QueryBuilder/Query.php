@@ -66,7 +66,14 @@ class Query
             
             foreach ($params as $columnName) {
                 if(empty($columnName)) continue;
-                array_push($this->columns, array($columnName));
+                if(count($params) == 1 && is_array($params[0])){
+                    foreach($columnName as $col){
+                        array_push($this->columns, array($col));
+                    }
+                }else{
+                    array_push($this->columns, array($columnName));
+                }
+                
             }
         }
         return $this;
