@@ -160,12 +160,20 @@ class Query
         switch (count($params)) {
             case 1:
                 if (gettype($params[0])=="array") {
-                    $query = new Query;
-                    foreach ($params[0] as $where) {
-                        call_user_func_array(array($query,"where"), $where);
-                    }
-                    $this->andCondition();
-                    array_push($this->conditions, $query);
+                    if(is_assoc_array($params[0])){
+                        foreach ($params[0] as $key => $val) {
+                            # code...
+                            $this->where($key, "=", $val);
+                        }
+                    }else{ 
+                        $query = new Query;
+                        foreach ($params[0] as $where) {
+                            //call_user_func_array(array($query,"where"), $where);
+                            if(count($where) === 3)  $this->where($where[0], $where[1], $where[2]);
+                        }
+                        //$this->andCondition();
+                        //array_push($this->conditions, $query);
+                   }
                 } elseif (is_callable($params[0])) {
                     $query = new Query;
                     $params[0]($query);
