@@ -108,6 +108,8 @@ class  Model
 
     protected $_sql = []; //执行sql语句
 
+    protected $appends = []; //追加属性
+
     /**
      * 
      *  架构方法
@@ -429,6 +431,13 @@ class  Model
 
          return $data;
     }
+
+    public function appends(array $data)
+    {
+        $this->appends = array_merge($this->appends, $data);
+         
+    }
+
     /**
      * 新增或修改
      *
@@ -717,6 +726,7 @@ class  Model
             
             $this->_result = $statement->fetch();
             if($this->_result){
+
                  //关联查询
                 if($this->with){
                     foreach ($this->with as $key => $method) {
@@ -730,7 +740,7 @@ class  Model
                 }
                 //转换格式
                 $this->_result = $this->_casts($this->_result, 0);
-
+                $this->_result = $this->_appends($this->_result);
             }
             
             $this->release();
@@ -772,6 +782,7 @@ class  Model
                 //转换格式
                 foreach ($this->_result as $key => &$row) {
                     # code...
+                    $row = $this->_appends($row);
                     $row = $this->_casts($row, 0);
                 }
 
@@ -793,6 +804,28 @@ class  Model
         return $this;
     }
 
+    /**
+     * 数据项追加处理
+     *
+     * @author pingo
+     * @created_at 00-00-00
+     * @param array $data
+     * @return void
+     */
+    public function _appends(array $data = [])
+    {
+        if($data && $this->appends){
+            foreach ($this->appends as $name) {
+                # code...
+                $get_method_name =  "get" . \ucfirst(line_tohump($name)) . "Attribute";
+                if( \method_exists($this, $get_method_name) ) {
+                    $default_val = $data[$name]?? null;
+                    $data[$name] = \call_user_func_array([$this, $get_method_name], [$default_val, $data]);
+                } 
+            }
+        }
+        return $data;
+    }
     /**
     * 返回数组中指定多列
     *
@@ -873,7 +906,11 @@ class  Model
         
         $relation_name = $relation_name ?? $table;
         if(is_assoc_array($this->_result)){
-            $this->_result[$relation_name] = $result ? ($relationClass->_casts($result)) : [];
+            $this->_result[$relation_name] = [];
+            if($result){
+                $result = $relationClass->_appends($result);
+                $this->_result[$relation_name] = $relationClass->_casts($result);
+            }
         }else{
             
             if($result) $result = $this->_array_columns($result, null, $foreign_key);
@@ -883,6 +920,7 @@ class  Model
                 if($result && isset($result[$row[$local_key]])){
                     $item = array_shift($result[$row[$local_key]]);
                     if($item){
+                        $item = $relationClass->_appends($item);
                         $row[$relation_name] =  $relationClass->_casts($item);
                     }else{
                         $row[$relation_name] =  null;
@@ -940,6 +978,7 @@ class  Model
             if($result){
                 foreach ($result as $key => $row) {
                     # code...
+                    $row = $relationClass->_appends($row);
                     $this->_result[$relation_name][] = $relationClass->_casts($row);
                 }
             }
@@ -950,6 +989,7 @@ class  Model
                 if($result && isset($result[$row[$local_key]])){
                     foreach ($result[$row[$local_key]] as $key => $item) {
                         # code...
+                        $item = $relationClass->_appends($item);
                         $row[$relation_name][]  = $relationClass->_casts($item);
                     }
                 }else{
@@ -1062,6 +1102,7 @@ class  Model
                     if(empty($relation_item)) continue;
                     foreach ($relation_item as $key => $relation) {
                         # code...
+                        $relation = $relationClass->_appends($relation);
                         $row[$relation_name][] = $relationClass->_casts($relation);
                     }
                      
