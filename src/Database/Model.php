@@ -908,7 +908,7 @@ class  Model
         if(is_assoc_array($this->_result)){
             $this->_result[$relation_name] = [];
             if($result){
-                $result = $relationClass->_appends($result);
+                $result = $relationClass->_appends($result[0]);
                 $this->_result[$relation_name] = $relationClass->_casts($result);
             }
         }else{
@@ -1010,9 +1010,64 @@ class  Model
      * @param [type] $other_key
      * @return void
      */
-    protected function belongsTo($relationClass, $foreign_key, $other_key)
+    protected function belongsTo($relationClass, $foreign_key, $other_key = '', $relation_name = '')
     {   
         //return $this->belongsTo('App\Models\User', 'foreign_key', 'other_key');
+        $relationClass = new $relationClass;
+        $table = $relationClass->table;
+        $builder = (new Builder)->table($table);
+        if(isset($this->with[$table]) && is_callable($this->with[$table])){
+            $call = $this->with[$table];
+            $call($builder);
+        }
+        //关联条件
+        
+        $local_keys = [];
+        if(is_assoc_array($this->_result)){
+            if(isset($this->_result[$foreign_key])) $local_keys[] = $this->_result[$foreign_key];
+        }else{
+            foreach ($this->_result as $key => $row) {
+                # code...
+                if(isset($row[$foreign_key])) $local_keys[] = $row[$foreign_key];
+            }
+        }
+        $other_key = empty($other_key)? $relationClass->primaryKey : $other_key;
+        $builder->whereIn($other_key, $local_keys);
+        $sql = $builder->toSQL(true);
+        $this->_sql[] = $sql;
+        $statement = $this->pdo->prepare($sql);
+        //$this->bindValues($statement, $bindings);
+        $statement->execute();
+        $result = $statement->fetchAll();
+        
+        $relation_name = empty($relation_name) ? $table : $relation_name;
+        if(is_assoc_array($this->_result)){
+            $this->_result[$relation_name] = [];
+            if($result){
+                $result = $relationClass->_appends($result[0]);
+                $this->_result[$relation_name] = $relationClass->_casts($result);
+            }
+        }else{
+            
+            if($result) $result = $this->_array_columns($result, null, $other_key);
+            
+            foreach ($this->_result as $key => &$row) {
+                # code...
+                if($result && isset($result[$row[$foreign_key]])){
+                    $item = array_shift($result[$row[$foreign_key]]);
+                    if($item){
+                        $item = $relationClass->_appends($item);
+                        $row[$relation_name] =  $relationClass->_casts($item);
+                    }else{
+                        $row[$relation_name] =  null;
+                    }
+                }else{
+                    $row[$relation_name] =  null;
+                }
+                 
+            }
+        }
+
     }
 
     /**
