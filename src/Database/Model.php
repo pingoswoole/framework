@@ -581,12 +581,133 @@ class  Model
         }
     }
 
+    protected function forPage($page, $count)
+    {
+        $number = ($page - 1) * $count;
+        $this->builder->limit($count)->skip($number);
+        return $this;
+    }
+
+
+    public function chunk($count, callable $callback)
+    {
+        // 类似于limit,offset 实现数据分页查询   LIMIT 100 OFFSET 500
+        $page = 1;
+        $results = $this->forPage($page, $count)->get();
+    
+        while (count($results) > 0) {
+            // On each chunk result set, we will pass them to the callback and then let the
+            // developer take care of everything within the callback, which allows us to
+            // keep the memory low for spinning through large result sets for working.
+            // 如果用户回调中，更新的字段与查询的字段是一个条件，就会出现这样的问题             
+            if (call_user_func($callback, $results) === false) {
+                return false;
+            }
+            $page++;
+            $results = $this->forPage($page, $count)->get();
+        }
+    
+        return true;
+    }
+
+
+    public function value(string $name)
+    {
+        try {
+            //code...
+            $this->realGetConn();
+            $this->builder->limit(1);
+            $sql = $this->builder->toSQL(true);
+            $this->_sql[] = $sql;
+            $statement = $this->pdo->prepare($sql);
+            //$this->bindValues($statement, $bindings);
+            $statement->execute();
+            $this->_result = $statement->fetch();
+            $this->release();
+
+            if($this->_result){
+                
+                //转换格式
+                $this->_result = $this->_casts($this->_result, 0);
+                //
+                return $this->_result[$name]?? null;
+            }
+            return null;
+        } catch (\Throwable $th) {
+            //throw $th;
+            //throw $th;
+            if($this->hasConnect) $this->release();
+            throw new \Exception($th->getMessage());
+        }
+    }
+    /**
+     * 获取一列多列
+     *
+     * @author pingo
+     * @created_at 00-00-00
+     * @return void
+     */
+    public function pluck()
+    {
+        try {
+            //code...
+            $params = func_get_args();
+            $this->realGetConn();
+            $sql = $this->builder->toSQL(true);
+            $this->_sql[] = $sql;
+            
+            $statement = $this->pdo->prepare($sql);
+            //$this->bindValues($statement, $bindings);
+            $statement->execute();
+            $this->_result = $statement->fetchAll();
+            $this->release();
+
+            if($this->_result){
+                
+                //转换格式
+                foreach ($this->_result as $key => &$row) {
+                    # code...
+                    $row = $this->_casts($row, 0);
+                }
+                //
+                switch (count($params)) {
+                    case 0:
+                        # code...
+                        return $this->_result;
+                        break;
+                    case 1:
+                        return array_column($this->_result, $params[0]);
+                        break;
+                    case 2:
+                        if(is_array($params[0])){
+                            return $this->_array_columns($this->_result, implode(',' , $params[0]), $params[1]);
+                        }
+                        return array_combine(array_column($this->_result, $params[1]), array_column($this->_result, $params[0]));
+                        break;
+                    default:
+                        # code...
+                        break;
+                }
+            }
+
+            return [];
+
+        } catch (\Throwable $th) {
+            //throw $th;
+            //throw $th;
+            if($this->hasConnect) $this->release();
+            throw new \Exception($th->getMessage());
+        }
+        
+    }
+
+
     public function first()
     {
         try {
             //code...
             $this->realGetConn();
-            
+            $this->builder->limit(1);
             $sql = $this->builder->toSQL(true);
             $this->_sql[] = $sql;
             $statement = $this->pdo->prepare($sql);

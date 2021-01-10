@@ -28,6 +28,8 @@ class DB
 
     protected $_sql = [];
 
+    protected $_result = [];
+
     public function __construct($config = null)
     {
         if (! empty($config)) {
@@ -135,6 +137,45 @@ class DB
     }
 
     /**
+        * 返回数组中指定多列
+        *
+        * @param Array $input 需要取出数组列的多维数组
+        * @param String $column_keys 要取出的列名，逗号分隔，如不传则返回所有列
+        * @param String $index_key 作为返回数组的索引的列
+        * @return Array
+    */
+    function _array_columns($input, $column_keys = null, $index_key = null)
+    {
+        $result = array();
+        
+        $keys =isset($column_keys)? explode(',', $column_keys) : array();
+        
+        if($input){
+            foreach($input as $k=>$v){
+            
+                // 指定返回列
+                if($keys){
+                    $tmp = array();
+                    foreach($keys as $key){
+                        $tmp[$key] = $v[$key];
+                    }
+                }else{
+                    $tmp = $v;
+                }
+                
+                // 指定索引列
+                if(isset($index_key)){
+                    $result[$v[$index_key]][] = $tmp;
+                }else{
+                    $result[] = $tmp;
+                }
+                
+            }
+        }
+        
+        return $result;
+    }
+    /**
      * 添加数据
      *
      * @author pingo
@@ -221,6 +262,122 @@ class DB
             throw new \Exception($th->getMessage());
         }
     }
+
+
+    protected function forPage($page, $count)
+    {
+        $number = ($page - 1) * $count;
+        $this->builder->limit($count)->skip($number);
+        return $this;
+    }
+
+
+    public function chunk($count, callable $callback)
+    {
+        // 类似于limit,offset 实现数据分页查询   LIMIT 100 OFFSET 500
+        $page = 1;
+        $results = $this->forPage($page, $count)->get();
+    
+        while (count($results) > 0) {
+            // On each chunk result set, we will pass them to the callback and then let the
+            // developer take care of everything within the callback, which allows us to
+            // keep the memory low for spinning through large result sets for working.
+            // 如果用户回调中，更新的字段与查询的字段是一个条件，就会出现这样的问题             
+            if (call_user_func($callback, $results) === false) {
+                return false;
+            }
+            $page++;
+            $results = $this->forPage($page, $count)->get();
+        }
+    
+        return true;
+    }
+
+
+    public function value(string $name)
+    {
+        try {
+            //code...
+            $this->realGetConn();
+            $this->builder->limit(1);
+            $sql = $this->builder->toSQL(true);
+            $this->_sql[] = $sql;
+            $statement = $this->pdo->prepare($sql);
+            //$this->bindValues($statement, $bindings);
+            $statement->execute();
+            $this->_result = $statement->fetch();
+            $this->release();
+
+            if($this->_result){
+                
+                //
+                return $this->_result[$name]?? null;
+            }
+            return null;
+        } catch (\Throwable $th) {
+            //throw $th;
+            //throw $th;
+            if($this->hasConnect) $this->release();
+            throw new \Exception($th->getMessage());
+        }
+    }
+    /**
+     * 获取一列多列
+     *
+     * @author pingo
+     * @created_at 00-00-00
+     * @return void
+     */
+    public function pluck()
+    {
+        try {
+            //code...
+            $params = func_get_args();
+            $this->realGetConn();
+            $sql = $this->builder->toSQL(true);
+            $this->_sql[] = $sql;
+            
+            $statement = $this->pdo->prepare($sql);
+            //$this->bindValues($statement, $bindings);
+            $statement->execute();
+            $this->_result = $statement->fetchAll();
+            $this->release();
+
+            if($this->_result){
+                
+                //
+                switch (count($params)) {
+                    case 0:
+                        # code...
+                        return $this->_result;
+                        break;
+                    case 1:
+                        return array_column($this->_result, $params[0]);
+                        break;
+                    case 2:
+                        if(is_array($params[0])){
+                            return $this->_array_columns($this->_result, implode(',' , $params[0]), $params[1]);
+                        }
+                        return array_combine(array_column($this->_result, $params[1]), array_column($this->_result, $params[0]));
+                        break;
+                    default:
+                        # code...
+                        break;
+                }
+            }
+
+            return [];
+
+        } catch (\Throwable $th) {
+            //throw $th;
+            //throw $th;
+            if($this->hasConnect) $this->release();
+            throw new \Exception($th->getMessage());
+        }
+        
+    }
+
+
     /**
      * 查询第一条记录
      *
