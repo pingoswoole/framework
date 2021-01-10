@@ -271,6 +271,15 @@ class DB
         return $this;
     }
 
+    public function page(int $page = 1, int $page_size = 10)
+    {
+        if($page <= 0) $page = 1;
+        if($page_size <= 0) $page_size = 10;
+        $number = ($page - 1) * $page_size;
+        $limit = "{$number}, {$page_size}";
+        $this->builder->limit($limit);
+        return $this;
+    }
 
     public function chunk($count, callable $callback)
     {

@@ -323,17 +323,7 @@ class  Model
     {
         return $this->errorInfo;
     }
-
-    public function last()
-    {
-        $log = end($this->logs);
-
-        return $this->generate($log[0], $log[1]);
-    }
-
-   
-
-    
+  
 
     private function realGetConn()
     {
@@ -585,6 +575,17 @@ class  Model
     {
         $number = ($page - 1) * $count;
         $this->builder->limit($count)->skip($number);
+        return $this;
+    }
+
+
+    public function page(int $page = 1, int $page_size = 10)
+    {
+        if($page <= 0) $page = 1;
+        if($page_size <= 0) $page_size = 10;
+        $number = ($page - 1) * $page_size;
+        $limit = "{$number}, {$page_size}";
+        $this->builder->limit($limit);
         return $this;
     }
 
@@ -1106,6 +1107,108 @@ class  Model
         }
     }
 
+
+    /**
+     * 字段递增
+     * 
+     * @author pingo
+     * @created_at 00-00-00
+     *  参数  数组形式、字符串    ['money' => 1, 'score' => 2] ('score', 100)
+     * @return void
+     */
+    public function increment()
+    {
+        try {
+
+            $params = func_get_args();
+            switch (count($params)) {
+                case 1:
+                    if (gettype($params[0])=="array") {
+                        foreach ($params[0] as $key => $val) {
+                            $this->builder->increment($key, $val);
+                        }
+                    }else{
+                        throw new \Exception('increment params is error');
+                    }
+                break;
+                case 2:
+                    $this->builder->increment($params[0], $params[1]);
+                    break;
+                case 3:
+                case 4:
+                case 5:
+                     throw new \Exception('increment params is error');
+                break;
+            }
+            
+            $sql = $this->builder->toSQL(TRUE);
+            $this->_sql[] = $sql; 
+            $this->realGetConn();
+            $statement = $this->pdo->prepare($sql);
+            $statement->execute();
+            $ret = $statement->rowCount();
+
+            $this->release();
+
+            return $ret;
+            //code...
+        } catch (\Throwable $th) {
+            //throw $th;
+            if($this->hasConnect) $this->release();
+            throw new \Exception($th->getMessage());
+        }
+    }
+
+    /**
+     * 递减字段
+     *
+     * @author pingo
+     * @created_at 00-00-00
+     * @return void
+     */
+    public function decrement()
+    {
+        try {
+            $params = func_get_args();
+            switch (count($params)) {
+                case 1:
+                    if (gettype($params[0])=="array") {
+                        foreach ($params[0] as $key => $val) {
+                            $this->builder->decrement($key, $val);
+                        }
+                    }else{
+                        throw new \Exception('decrement params is error');
+                    }
+                break;
+                case 2:
+                    $this->builder->decrement($params[0], $params[1]);
+                    break;
+                case 3:
+                case 4:
+                case 5:
+                     throw new \Exception('decrement params is error');
+                break;
+            }
+            
+            $sql = $this->builder->toSQL(TRUE);
+            $this->_sql[] = $sql; 
+            $this->realGetConn();
+            $statement = $this->pdo->prepare($sql);
+            $statement->execute();
+            $ret = $statement->rowCount();
+
+            $this->release();
+
+            return $ret;
+            //code...
+        } catch (\Throwable $th) {
+            //throw $th;
+            if($this->hasConnect) $this->release();
+            throw new \Exception($th->getMessage());
+        }
+    }
+
+    
     public function __call($method, $arguments)
     {
         try {
