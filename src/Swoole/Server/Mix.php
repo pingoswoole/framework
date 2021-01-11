@@ -38,7 +38,7 @@ class Mix extends SwooleEvent
         'Request',
         'Message',
         'Open',
-        'HandShake',
+        //'HandShake',
          
     ];
 
@@ -91,7 +91,8 @@ class Mix extends SwooleEvent
                 });
 
             }else{
-                $this->server->on($event, [$this, "on{$event}"]);
+                
+                $this->server->on($event, [$this, "on{$event}"]); 
             }
         }
     }
@@ -106,7 +107,7 @@ class Mix extends SwooleEvent
     public function create()
     {
         ConsoleTools::opCacheClear();
-        $this->server = new \Swoole\Http\Server(
+        $this->server = new \Swoole\WebSocket\Server(
             $this->swoole_set['host'], 
             $this->swoole_set['port'], 
             $this->swoole_set['mode'], 
@@ -208,7 +209,7 @@ class Mix extends SwooleEvent
 
     public function onWorkerStop(\Swoole\Server $server, int $workerId)
     {
-
+         
     }
 
     public function onWorkerExit(\Swoole\Server $server, int $workerId)
@@ -216,9 +217,9 @@ class Mix extends SwooleEvent
 
     }
 
-    public function onConnect(\Swoole\Server $server, int $fd, int $reactorId)
+    public function onConnect(...$params)
     {
-
+        call_user_func([\App\SwooleEvent::class, 'onConnect'], ...$params);
     }
 
     public function onReceive(\Swoole\Server $server, int $fd, int $reactorId, string $data)
@@ -230,20 +231,21 @@ class Mix extends SwooleEvent
     {
 
     }
-
-    public function onTask(\Swoole\Server $server, int $task_id, int $src_worker_id,  $data)
+    public function onTask(\Swoole\Server $server, \Swoole\Server\Task $task)
     {
-
+       
+        call_user_func_array([\App\SwooleEvent::class, 'onTask'], [$server, $task]);
     }
 
-    public function onClose(\Swoole\Server $server, int $fd, int $reactorId)
-    {
 
+    public function onClose(...$params)
+    {
+        call_user_func([\App\SwooleEvent::class, 'onClose'], ...$params);
     }
 
-    public function onFinish(\Swoole\Server $server, int $task_id,  $data)
+    public function onFinish(...$params)
     {
-
+        call_user_func([\App\SwooleEvent::class, 'onFinish'], ...$params);
     }
 
     public function onPipeMessage(\Swoole\Server $server, int $src_worker_id,  $message)
@@ -285,19 +287,19 @@ class Mix extends SwooleEvent
         $this->_route->dispatch($request, $response); */
     }
 
-    public function onMessage(\Swoole\WebSocket\Server $server, \Swoole\WebSocket\Frame $frame)
+    public function onMessage(...$params)
     {
-
+        call_user_func([\App\SwooleEvent::class, 'onMessage'], ...$params);
     }
 
-    public function onOpen(\Swoole\WebSocket\Server $server, \Swoole\Http\Request $request)
-    {
-
+    public function onOpen(...$params)
+    {   
+        call_user_func([\App\SwooleEvent::class, 'onOpen'], ...$params);
     }
 
-    public function onHandShake(\Swoole\Http\Request $request, \Swoole\Http\Response $response)
+    public function onHandShake(...$params)
     {
-
+        call_user_func([\App\SwooleEvent::class, 'onHandShake'], ...$params);
     }
       
 

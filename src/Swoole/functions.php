@@ -41,3 +41,23 @@ if(!function_exists("set_process_name")){
     }
 }
 
+if(!function_exists('add_task'))
+{
+    /**
+     * 添加异步任务， 返回任务ID
+     *
+     * @author pingo
+     * @created_at 00-00-00
+     * @param string $type
+     * @param [type] $data
+     * @return void
+     */
+    function add_task(string $type, $data)
+    {
+        $task_data = [
+            'type' => $type,
+            'data' => $data,
+        ];
+        return \Pingo\Swoole\Manager::getInstance()->getSwooleServer()->task($task_data);
+    }
+}
