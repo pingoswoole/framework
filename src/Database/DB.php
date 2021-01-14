@@ -84,7 +84,7 @@ class DB
         $this->release();
     }
 
-    public function query(string $query, array $bindings = []): array
+    public function query(string $query, array $bindings = [])
     {
         $this->realGetConn();
 
