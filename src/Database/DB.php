@@ -94,11 +94,11 @@ class DB
         
         $statement->execute();
 
-        $ret = $statement->fetchAll();
+        //$ret = $statement->fetchAll();
 
         $this->release();
 
-        return $ret;
+        return $statement;
     }
 
     public function fetch(string $query, array $bindings = [])
