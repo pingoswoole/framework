@@ -359,11 +359,13 @@ class  Model
     public function _casts(array $data, int $flow = 0):array
     {
          //默认时间转换
-         if(isset($data[self::CREATED_AT]) && is_integer($data[self::CREATED_AT])){
-            $data[self::CREATED_AT] = date("Y-m-d H:i:s", $data[self::CREATED_AT]);
-         }
-         if(isset($data[self::UPDATED_AT]) && is_integer($data[self::UPDATED_AT])){
-            $data[self::UPDATED_AT] = date("Y-m-d H:i:s", $data[self::UPDATED_AT]);
+         if($flow == 0){
+             if(isset($data[self::CREATED_AT]) && is_integer($data[self::CREATED_AT])){
+                $data[self::CREATED_AT] = date("Y-m-d H:i:s", $data[self::CREATED_AT]);
+             }
+             if(isset($data[self::UPDATED_AT]) && is_integer($data[self::UPDATED_AT])){
+                $data[self::UPDATED_AT] = date("Y-m-d H:i:s", $data[self::UPDATED_AT]);
+             }
          }
          //已配置转换
          if($this->casts){
