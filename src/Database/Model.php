@@ -536,6 +536,7 @@ class  Model
         try {
             if(empty($data)) throw new \Exception("新增数据不能为空");
             if($this->timestamps) $data[self::UPDATED_AT] = time();
+            $data = $this->_casts($data, 1);
             $sql = $this->builder->update($data)->toSQL(TRUE);
             $this->_sql[] = $sql;
             $this->realGetConn();
