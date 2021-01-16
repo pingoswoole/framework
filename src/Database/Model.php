@@ -353,10 +353,10 @@ class  Model
      * @author pingo
      * @created_at 00-00-00
      * @param array $data 二维数组
-     * @param int $type 类型，1 正向新增， 0 反向查询
+     * @param int $flow 类型，1 正向新增， 0 反向查询
      * @return array
      */
-    public function _casts(array $data, int $type = 0):array
+    public function _casts(array $data, int $flow = 0):array
     {
          //默认时间转换
          if(isset($data[self::CREATED_AT]) && is_integer($data[self::CREATED_AT])){
@@ -389,7 +389,7 @@ class  Model
                              break;
                          case 'boolean':
                              # code... tinyint(1) 1代表TRUE,0代表FALSE
-                             if($type == 1){
+                             if($flow == 1){
                                 $data[$key] =  $data[$key] === true ? 1 : 0;
                              }else{
                                 $data[$key] =  $data[$key] == 1 ? true : false;
@@ -397,7 +397,7 @@ class  Model
                              break;
                          case 'object':
                             # code...
-                            if($type == 1){
+                            if($flow == 1){
                                 $data[$key] =  serialize($data[$key]);
                              }else{
                                 $data[$key] =  unserialize($data[$key]);
@@ -406,7 +406,7 @@ class  Model
                          case 'array':
                          case 'json':
                              # code...
-                             if($type == 1){
+                             if($flow == 1){
                                 $data[$key] =  json_encode($data[$key]);
                              }else{
                                 $data[$key] =  json_decode($data[$key], true);
@@ -414,7 +414,7 @@ class  Model
                              break;
                          case 'datetime':
                             # code...
-                            if($type == 1){
+                            if($flow == 1){
                                 $data[$key] =  strtotime($data[$key]);
                              }else{
                                 $data[$key] =  date("Y-m-d H:i:s" , $data[$key]);
