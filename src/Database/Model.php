@@ -785,7 +785,7 @@ class  Model
                 //转换格式
                 foreach ($this->_result as $key => &$row) {
                     # code...
-                    $row = $this->_appends($row);
+                    $row = (array) $this->_appends($row);
                     $row = $this->_casts($row, 0);
                 }
 
@@ -1057,7 +1057,7 @@ class  Model
             foreach ($this->_result as $key => &$row) {
                 # code...
                 if($result && isset($result[$row[$foreign_key]])){
-                    $item = array_shift($result[$row[$foreign_key]]);
+                    $item = $result[$row[$foreign_key]][0]?? [];
                     if($item){
                         $item = $relationClass->_appends($item);
                         $row[$relation_name] =  $relationClass->_casts($item);
