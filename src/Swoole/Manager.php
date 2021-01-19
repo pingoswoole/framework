@@ -2,6 +2,7 @@
 namespace Pingo\Swoole;
 
 use Pingo\Component\ConsoleTools;
+use Pingo\Component\Di;
 use Pingo\Traits\Singleton;
 use Pingo\Contracts\Swoole\Factory;
 use Pingo\Config\Config;
@@ -66,7 +67,25 @@ class Manager implements Factory
                 // mix server
                 $classServerName = \Pingo\Swoole\Server\Mix::class;
         }
+
         list($this->swooleServer, $this->childServer) = $classServerName::getInstance($this->setting)->create();
+
+        //内存表创建
+        $swoole_table_setting = Config::getInstance()->get('swoole_table');
+        if($swoole_table_setting['table']){
+            foreach ($swoole_table_setting['table'] as $table_name => $table_data) {
+                # code..
+                $tableObj = new \Swoole\Table($table_data['size']);
+                foreach ($table_data['field'] as $key => $field) {
+                    # code...
+                    list($field_type, $field_size) = $field;
+                    $tableObj->column($key, $field_type, $field_size);
+                }
+                $tableObj->create();
+                Di::getInstance()->set($swoole_table_setting['prefix'] . $table_name, $tableObj);
+            }
+        }
+
         \App\SwooleEvent::globalService($this->swooleServer);
         return true;
     }
