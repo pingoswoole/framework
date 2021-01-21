@@ -2,6 +2,8 @@
 
 namespace Pingo\Database\QueryBuilder;
 
+use Pingo\Database\Exception\QueryException;
+
 class SQL
 {
     protected $query;
@@ -87,8 +89,9 @@ class SQL
                     break;
                 }
             } elseif (gettype($condition)=="string") {
+                //条件连接符 AND OR 
                 $result .= " $condition ";
-            } elseif (is_a($condition, 'koolreport\querybuilder\Query')) {
+            } elseif (is_a($condition, 'Pingo\Database\QueryBuilder\Query')) {
                 $result.="(".$this->getWhere($condition->conditions).")";
             }
         }
@@ -268,7 +271,7 @@ class SQL
         if (count($this->query->conditions)>0) {
             $sql.=" WHERE ".$this->getWhere($this->query->conditions);
         }
-
+         
         if (count($this->query->groups)>0) {
             $sql.=" GROUP BY ".$this->getGroupBy($this->query->groups);
         }

@@ -645,7 +645,7 @@ class DB
             return $this;
         } catch (\Exception $e) {
              //($e->getMessage());
-             return false;
+             throw new \Exception($e->getMessage());
         }
     }
     

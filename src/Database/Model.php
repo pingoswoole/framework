@@ -7,6 +7,7 @@ namespace Pingo\Database;
 use Exception;
 use InvalidArgumentException;
 use PDO;
+use Pingo\Database\Exception\QueryException;
 use RuntimeException;
 use Swoole\Coroutine;
 use Swoole\Database\PDOStatementProxy;
@@ -794,11 +795,12 @@ class  Model
             $this->release();
             
             return $this->_result;
-        } catch (\Throwable $th) {
+        } catch (\Exception $th) {
             //throw $th;
             if($this->is_connect) $this->release();
             throw new \Exception($th->getMessage());
         }
+        
     }
 
     public function with(array $relations = [])
@@ -1319,8 +1321,8 @@ class  Model
             }
             return $this;
         } catch (\Exception $e) {
-             //($e->getMessage());
-             return false;
+             //QueryBuilder 语法错误，抛开异常
+             throw new \Exception($e->getMessage());
         }
     }
 

@@ -1,6 +1,7 @@
 <?php
 
 namespace Pingo\Database\QueryBuilder;
+use Pingo\Database\Exception\QueryException;
 
 class Query
 {
@@ -18,6 +19,8 @@ class Query
     public $unions;
     public $values;
     public $lock = null;
+     
+
 
     public function __construct()
     {
@@ -30,6 +33,7 @@ class Query
         $this->joins = array();
         $this->unions = array();
         $this->values = array();
+
     }
 
     public function distinct()
@@ -160,7 +164,7 @@ class Query
 
     protected function pushStandardCondition($params)
     {
-        if ($params[2]===null && $params[1]==="=") {
+        if (count($params) >= 2 && $params[2]===null && $params[1]==="=") {
             $params[1] = "IS";
         }
         array_push($this->conditions, $params);
@@ -176,6 +180,7 @@ class Query
                     if(is_assoc_array($params[0])){
                         foreach ($params[0] as $key => $val) {
                             # code...
+                            if(empty($key) || !is_string($key)) throw new QueryException('查询字段错误！:' . json_encode($key), QueryException::FIELD_ERROR);
                             $this->where($key, "=", $val);
                         }
                     }else{ 
@@ -195,6 +200,8 @@ class Query
                 }
             break;
             case 2:
+                if(is_array($params[1]) || is_object($params[1])) throw new QueryException('查询字段错误！:' . json_encode($params), QueryException::FIELD_ERROR);;
+                if(empty($params[0]) || !is_string($params[0])) throw new QueryException('查询字段错误！:' . json_encode($params), QueryException::FIELD_ERROR);;
                 $this->where($params[0], "=", $params[1]);
                 break;
             case 3:
@@ -239,64 +246,87 @@ class Query
     //Null
     public function whereNull($name)
     {
+        $name = $this->_checkName($name);
         return $this->where($name, 'IS', null);
     }
+
     public function whereNotNull($name)
     {
+        $name = $this->_checkName($name);
         return $this->where($name, 'IS NOT', null);
     }
     public function orWhereNull($name)
     {
+        $name = $this->_checkName($name);
         return $this->orWhere($name, 'IS', null);
     }
     public function orWhereNotNull($name)
     {
+        $name = $this->_checkName($name);
         return $this->orWhere($name, 'IS NOT', null);
     }
 
     //In
-    public function whereIn($name, $array)
+    public function whereIn($name, array $array)
     {
+        $name = $this->_checkName($name);
+         
+        if(empty($array)) throw new QueryException('查询条件In不能为空');
+
         return $this->where($name, 'IN', $array);
     }
-    public function whereNotIn($name, $array)
+    public function whereNotIn($name, array $array)
     {
+        $name = $this->_checkName($name);
+        if(empty($array)) throw new QueryException('查询条件In不能为空');
         return $this->where($name, 'NOT IN', $array);
     }
-    public function orWhereIn($name, $array)
+    public function orWhereIn($name, array $array)
     {
+        $name = $this->_checkName($name);
+        if(empty($array)) throw new QueryException('查询条件In不能为空');
         return $this->orWhere($name, 'IN', $array);
     }
     public function orWhereNotIn($name, $array)
     {
+        $name = $this->_checkName($name);
+        if(empty($array)) throw new QueryException('查询条件In不能为空');
         return $this->orWhere($name, 'NOT IN', $array);
     }
 
     //Between
-    public function whereBetween($name, $array)
+    public function whereBetween($name, array $array)
     {
+        $name = $this->_checkName($name);
+        if(count($array) !== 2 ) throw new QueryException('查询条件between不符合');
         return $this->where(array(
             array($name,">=",$array[0]),
             array($name,"<=",$array[1])
         ));
     }
-    public function whereNotBetween($name, $array)
+    public function whereNotBetween($name, array $array)
     {
+        $name = $this->_checkName($name);
+        if(count($array) !== 2 ) throw new QueryException('查询条件between不符合');
         $this->where(function ($query) use ($name,$array) {
             $query->where($name, "<", $array[0])
             ->orWhere($name, ">", $array[1]);
         });
         return $this;
     }
-    public function orWhereBetween($name, $array)
+    public function orWhereBetween($name, array $array)
     {
+        $name = $this->_checkName($name);
+        if(count($array) !== 2 ) throw new QueryException('查询条件between不符合');
         return $this->orWhere(array(
             array($name,">=",$array[0]),
             array($name,"<=",$array[1])
         ));
     }
-    public function orWhereNotBetween($name, $array)
+    public function orWhereNotBetween($name, array $array)
     {
+        $name = $this->_checkName($name);
+        if(count($array) !== 2 ) throw new QueryException('查询条件between不符合');
         $this->orWhere(function ($query) use ($name,$array) {
             $query->where($name, "<", $array[0])
             ->orWhere($name, ">", $array[1]);
@@ -308,6 +338,8 @@ class Query
 
     protected function whereFunction($name, $params)
     {
+        $name = $this->_checkName($name);
+        
         $c = count($params);
         if ($c==1) {
             return $this->where("$name($params[0])", "=", date("Y-m-d"));
@@ -318,8 +350,10 @@ class Query
         }
         return $this;
     }
+
     protected function orWhereFunction($name, $params)
     {
+        $name = $this->_checkName($name);
         $c = count($params);
         if ($c==1) {
             return $this->orWhere("$name($params[0])", "=", date("Y-m-d"));
@@ -453,14 +487,16 @@ class Query
     }
 
     //Raw
-    public function whereRaw($raw, $params=null)
+    public function whereRaw(string $raw, $params=null)
     {
+        if(empty($raw)) return $this;
         $this->andCondition();
         array_push($this->conditions, Builder::raw($raw, $params));
         return $this;
     }
-    public function orWhereRaw($raw, $params=null)
+    public function orWhereRaw(string $raw, $params=null)
     {
+        if(empty($raw)) return $this;
         $this->orCondition();
         array_push($this->conditions, Builder::raw($raw, $params));
         return $this;
@@ -485,8 +521,9 @@ class Query
         return $this;
     }
 
-    public function orderByRaw($raw, $params=null)
+    public function orderByRaw(string $raw, $params=null)
     {
+        if(empty($raw)) return $this;
         array_push($this->orders, Builder::raw($raw, $params));
         return $this;
     }
@@ -565,7 +602,7 @@ class Query
     }
 
     //---------------//
-    public function skip($number)
+    public function skip(int $number)
     {
         return $this->offset($number);
     }
@@ -577,12 +614,14 @@ class Query
 
     public function limit($number)
     {
+        if(empty($number)) return $this;
         $this->limit = $number;
         return $this;
     }
 
     public function take($number)
     {
+        if(empty($number)) return $this;
         return $this->limit($number);
     }
 
@@ -607,7 +646,7 @@ class Query
         return $this;
     }
 
-    public function branch($value, $array)
+    public function branch($value, array $array)
     {
         if (isset($array[$value]) && is_callable($array[$value])) {
             $array[$value]($this);
@@ -616,8 +655,9 @@ class Query
     }
 
     //---------------//
-    protected function allJoin($method, $params)
+    protected function allJoin($method, array $params)
     {
+        if(empty($params)) return $this;
         $join = array($method,$params[0]);
         array_splice($params, 0, 1);
         if (count($params)==1 && is_callable($params[0])) {
@@ -822,4 +862,16 @@ class Query
         }
         return $arr;
     }
+
+    protected function _checkName($name)
+    {
+        if(empty($name)){
+            throw new QueryException('查询字段不能为空！', QueryException::FIELD_ERROR);
+        }
+        if(!is_string($name)){
+            throw new QueryException('查询字段只限定字符串！:' . json_encode($name), QueryException::FIELD_ERROR);
+        }
+        return trim($name);
+    }
+
 }
