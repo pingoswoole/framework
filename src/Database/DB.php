@@ -148,6 +148,11 @@ class DB
     {
         if (! $this->in_transaction) {
             $this->pdo = $this->pool->getConnection();
+            $status_info = $this->pdo->getAttribute(\PDO::ATTR_SERVER_INFO);
+            if(empty($status_info)){
+                unset($this->pdo);
+                return $this->realGetConn();
+            }
         }
     }
 
