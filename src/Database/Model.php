@@ -13,6 +13,7 @@ use Swoole\Coroutine;
 use Swoole\Database\PDOStatementProxy;
 
 use Pingo\Database\QueryBuilder\Builder;
+use Pingo\Pool\PoolManager;
 
 /*!
  * Medoo database framework
@@ -123,12 +124,7 @@ class  Model
     {
         
         if($get_pool){
-             
-            if (! empty($config)) {
-                $this->pool = \Pingo\Database\PDOPool::getInstance($config);
-            } else {
-                $this->pool = \Pingo\Database\PDOPool::getInstance();
-            }
+            $this->pool  = PoolManager::getInstance()->getConnectionPool('mysql');
         }
 
         if(empty($this->table)){
@@ -330,17 +326,26 @@ class  Model
 
     private function realGetConn()
     {
-        if (! $this->in_transaction) {
-            $this->pdo = $this->pool->getConnection();
-            $this->pdo->exec('SET SQL_MODE=ANSI_QUOTES');
-            $this->is_connect = true;
+        try {
+            //code...
+            if (! $this->in_transaction) {
+                $this->pdo = $this->pool->borrow();
+                $this->pdo->exec('SET SQL_MODE=ANSI_QUOTES');
+                $this->is_connect = true;
+            }
+        } catch (\Throwable $th) {
+            //throw $th;
+            if(strpos($th->getMessage(), 'MySQL server has gone away')!==false){
+                return false;
+            }
+            $this->realGetConn();
         }
     }
 
     private function release()
     {
         if (! $this->in_transaction) {
-            $this->pool->close($this->pdo);
+            $this->pool->return($this->pdo);
             $this->is_connect = false;
         }
         $this->builder = (new Builder)->table($this->table);

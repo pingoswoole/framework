@@ -6,6 +6,7 @@ namespace Pingo\Database;
 
 use PDO;
 use Pingo\Database\QueryBuilder\Builder;
+use Pingo\Pool\PoolManager;
 use RuntimeException;
 use Swoole\Coroutine;
 use Swoole\Database\PDOStatementProxy;
@@ -32,12 +33,7 @@ class DB
 
     public function __construct($config = null)
     {
-        if (! empty($config)) {
-            $this->pool = \Pingo\Database\PDOPOOL::getInstance($config);
-        } else {
-            $this->pool = \Pingo\Database\PDOPOOL::getInstance();
-        }
-        
+        $this->pool  = PoolManager::getInstance()->getConnectionPool('mysql');
     }
 
     public function table(string $table)
@@ -564,16 +560,25 @@ class DB
 
     private function realGetConn()
     {
-        if (! $this->in_transaction) {
-            $this->pdo = $this->pool->getConnection();
-            $this->hasConnect = true;
+        try {
+            //code...
+            if (! $this->in_transaction) {
+                $this->pdo = $this->pool->borrow();
+                $this->hasConnect = true;
+            }
+        } catch (\Throwable $th) {
+            //throw $th;
+            if(strpos($th->getMessage(), 'MySQL server has gone away')!==false){
+                return false;
+            }
+            $this->realGetConn();
         }
     }
 
     private function release()
     {
         if (! $this->in_transaction) {
-            $this->pool->close($this->pdo);
+            $this->pool->return($this->pdo);
             $this->hasConnect = false;
         }
         $this->builder = (new Builder)->table($this->table);
