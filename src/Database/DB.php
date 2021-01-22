@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Pingo\Database;
 
 use PDO;
+use Pingo\Pool\PoolManager;
 use RuntimeException;
 use Swoole\Coroutine;
 use Swoole\Database\PDOStatementProxy;
@@ -21,10 +22,11 @@ class DB
     public function __construct($config = null)
     {
         if (! empty($config)) {
-            $this->pool = \Pingo\Database\PDOPOOL::getInstance($config);
+            //$this->pool = \Pingo\Database\PDOPOOL::getInstance($config);
         } else {
-            $this->pool = \Pingo\Database\PDOPOOL::getInstance();
+            //$this->pool = \Pingo\Database\PDOPOOL::getInstance();
         }
+        $this->pool  = PoolManager::getInstance()->getConnectionPool('mysql');
     }
 
     public function quote(string $string, int $parameter_type = PDO::PARAM_STR)
@@ -146,20 +148,25 @@ class DB
 
     private function realGetConn()
     {
-        if (! $this->in_transaction) {
-            $this->pdo = $this->pool->getConnection();
-            $status_info = $this->pdo->getAttribute(\PDO::ATTR_SERVER_INFO);
-            if(empty($status_info)){
-                unset($this->pdo);
-                return $this->realGetConn();
+        try {
+            //code...
+            if (! $this->in_transaction) {
+                $this->pdo = $this->pool->borrow();
             }
+        } catch (\Throwable $th) {
+            //throw $th;
+            if(strpos($th->getMessage(), 'MySQL server has gone away')!==false){
+                throw new \Exception('MySQL server has gone away');
+              }
+            $this->realGetConn();
         }
     }
 
     private function release()
     {
         if (! $this->in_transaction) {
-            $this->pool->close($this->pdo);
+            $this->pool->return($this->pdo);
+            //$this->pool->close($this->pdo);
         }
     }
 }
