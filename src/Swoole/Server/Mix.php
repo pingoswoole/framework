@@ -181,7 +181,32 @@ class Mix extends SwooleEvent
         file_put_contents( $this->setting['manager_pid_file'], $server->manager_pid);
         set_process_name($this->setting['master_process_name']);
         
-        PoolManager::getInstance();
+        //PoolManager::getInstance();
+
+        //注冊連接池
+        $database_setting = Config::getInstance()->get("database");
+        $pools = PoolManager::getInstance();
+        $pool1 = new ConnectionPool(
+            [
+                'minActive' => 1,
+                'maxActive' => 2,
+                'maxWaitTime' => 10,
+            ],
+            new PDOConnector,
+            [
+                'dsn'        => "mysql:host={$database_setting['host']};dbname={$database_setting['database']}",
+                'port'        => $database_setting['port'],
+                'username'        => $database_setting['username'],
+                'password'    => $database_setting['password'],
+                'database'    => $database_setting['database'],
+                'timeout'     => 10,
+                'charset'     => 'utf8mb4',
+                'strict_type' => true,
+                'fetch_mode'  => true,
+            ]);
+        $pool1->init();
+        $pools->addConnectionPool('mysql', $pool1);
+
     }
 
     public function onShutdown(\Swoole\Server $server)
@@ -208,11 +233,8 @@ class Mix extends SwooleEvent
         */
         $redis_setting = Config::getInstance()->get("redis");
         \Pingo\Database\RedisPool::getInstance($redis_setting); 
-        //进程池设置
         $database_setting = Config::getInstance()->get("database");
-        \Pingo\Database\PDOPool::getInstance($database_setting);
-        \Pingo\Database\RedisPool::getInstance($redis_setting);
-        //注冊第二個連接池
+        //注冊連接池
         $pools = PoolManager::getInstance();
         $pool1 = new ConnectionPool(
             [
