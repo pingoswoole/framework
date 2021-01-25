@@ -9,6 +9,9 @@ use Pingo\Swoole\Context;
 use Pingo\Config\Config;
 use Pingo\Http\Request;
 use Pingo\Http\Response;
+use Pingo\Pool\ConnectionPool;
+use Pingo\Pool\Connectors\PDOConnector;
+use Pingo\Pool\Connectors\PhpRedisConnector;
 use Pingo\Pool\PoolManager;
 use Pingo\Swoole\Constant;
 
@@ -203,34 +206,48 @@ class Mix extends SwooleEvent
             set_process_name($this->setting['worker_process_name'] . $workerId);
         }
         //进程池设置
-        $redis_setting = Config::getInstance()->get("redis");
-        \Pingo\Database\RedisPool::getInstance($redis_setting); 
-        //进程池设置
+        $pools            = PoolManager::getInstance();
+        $redis_setting    = Config::getInstance()->get("redis");
         $database_setting = Config::getInstance()->get("database");
-        \Pingo\Database\PDOPool::getInstance($database_setting);
-        \Pingo\Database\RedisPool::getInstance($redis_setting);
-        //注冊第二個連接池
-        $pools = PoolManager::getInstance();
+        
         $pool1 = new ConnectionPool(
             [
-                'minActive' => 2,
-                'maxActive' => 30,
+                'minActive' => $database_setting['pool_min'],
+                'maxActive' => $database_setting['pool_max'],
                 'maxWaitTime' => 10,
             ],
             new PDOConnector,
             [
-                'dsn'        => "mysql:host={$database_setting['host']};dbname={$database_setting['database']}",
+                'dsn'         => "mysql:host={$database_setting['host']};dbname={$database_setting['database']}",
                 'port'        => $database_setting['port'],
-                'username'        => $database_setting['username'],
+                'username'    => $database_setting['username'],
                 'password'    => $database_setting['password'],
-                'database'    => $database_setting['database'],
-                'timeout'     => 10,
+                'options'     => $database_setting['options'],
                 'charset'     => 'utf8mb4',
-                'strict_type' => true,
-                'fetch_mode'  => true,
-            ]);
+            ]
+        );
         $pool1->init();
+        $pool2 = new ConnectionPool(
+            [
+                'minActive' => $redis_setting['pool_min'],
+                'maxActive' => $redis_setting['pool_max'],
+                'maxWaitTime' => 10,
+            ],
+            new PhpRedisConnector,
+            [
+                'host'        => $redis_setting['host'],
+                'port'        => $redis_setting['port'],
+                'timeout'     => $redis_setting['time_out'],
+                'password'    => $redis_setting['auth'],
+                'database'    => $redis_setting['db_index'],
+                'options'     => $redis_setting['options']??[],
+                
+            ]
+        );
+        $pool2->init();
+
         $pools->addConnectionPool('mysql', $pool1);
+        $pools->addConnectionPool('redis', $pool2);
 
     }
 

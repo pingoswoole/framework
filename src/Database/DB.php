@@ -19,7 +19,7 @@ class DB
     /** @var PDO */
     protected $pdo;
 
-    protected $builder;
+    protected $builder = null;
 
     private $in_transaction = false;
 
@@ -27,14 +27,33 @@ class DB
 
     protected $hasConnect = false; //是否获取连接
 
+    protected $manual_return_conn = false; //是否手动归还链接
+
     protected $_sql = [];
 
     protected $_result = [];
 
-    public function __construct($config = null)
+    public function __construct($pool_name = 'mysql')
     {
         $this->pool  = PoolManager::getInstance()->getConnectionPool('mysql');
+
     }
+
+    /**
+     * 初始化链接
+     *
+     * @author pingo
+     * @created_at 00-00-00
+     * @return void
+     */
+    public function initConnect()
+    {
+        $this->realGetConn();
+        $this->manual_return_conn = true;
+        $this->hasConnect = true;
+        return $this;
+    }
+     
 
     public function table(string $table)
     {
@@ -183,10 +202,12 @@ class DB
     {
         try {
             //code...
+            if(empty($this->builder)) throw new \Exception('please select table');
             $this->realGetConn();
             $query = $this->builder->insert($fields)->toSQL(TRUE);
             $this->_sql[] = $query; 
             $statement = $this->pdo->prepare($query);
+            if(false === $statement) throw new \Exception('SQL error:' . $query);
             //$this->bindValues($statement, $bindings);
             $statement->execute();
 
@@ -215,10 +236,12 @@ class DB
     public function update(array $data)
     {
         try {
+            if(empty($this->builder)) throw new \Exception('please select table');
             $sql = $this->builder->update($data)->toSQL(TRUE);
             $this->_sql[] = $sql; 
             $this->realGetConn();
             $statement = $this->pdo->prepare($sql);
+            if(false === $statement) throw new \Exception('SQL error:' . $sql);
             $statement->execute();
             $ret = $statement->rowCount();
             $this->release();
@@ -242,10 +265,12 @@ class DB
     public function delete()
     {
         try {
+            if(empty($this->builder)) throw new \Exception('please select table');
             $sql = $this->builder->delete()->toSQL(TRUE);
             $this->_sql[] = $sql; 
             $this->realGetConn();
             $statement = $this->pdo->prepare($sql);
+            if(false === $statement) throw new \Exception('SQL error:' . $sql);
             $statement->execute();
             $ret = $statement->rowCount();
             $this->release();
@@ -303,11 +328,13 @@ class DB
     {
         try {
             //code...
+            if(empty($this->builder)) throw new \Exception('please select table');
             $this->realGetConn();
             $this->builder->limit(1);
             $sql = $this->builder->toSQL(true);
             $this->_sql[] = $sql;
             $statement = $this->pdo->prepare($sql);
+            if(false === $statement) throw new \Exception('SQL error:' . $sql);
             //$this->bindValues($statement, $bindings);
             $statement->execute();
             $this->_result = $statement->fetch();
@@ -338,12 +365,14 @@ class DB
         try {
             //code...
             $params = func_get_args();
+            if(empty($this->builder)) throw new \Exception('please select table');
             $this->realGetConn();
             $sql = $this->builder->toSQL(true);
             $this->_sql[] = $sql;
             
             $statement = $this->pdo->prepare($sql);
             //$this->bindValues($statement, $bindings);
+            if(false === $statement) throw new \Exception('SQL error:' . $sql);
             $statement->execute();
             $this->_result = $statement->fetchAll();
             $this->release();
@@ -393,12 +422,12 @@ class DB
     public function first()
     {
         try {
-             
+            if(empty($this->builder)) throw new \Exception('please select table'); 
             $sql = $this->builder->first()->toSQL(TRUE);
             $this->_sql[] = $sql; 
             $this->realGetConn();
             $statement = $this->pdo->prepare($sql);
-
+            if(false === $statement) throw new \Exception('SQL error:' . $sql);
             //$this->bindValues($statement, $bindings);
 
             $statement->execute();
@@ -425,12 +454,13 @@ class DB
     public function get()
     {
         try {
+            if(empty($this->builder)) throw new \Exception('please select table');
             $sql = $this->builder->toSQL(TRUE);
             $this->_sql[] = $sql; 
             $this->realGetConn();
 
             $statement = $this->pdo->prepare($sql);
-
+            if(false === $statement) throw new \Exception('SQL error:' . $sql);
             //$this->bindValues($statement, $bindings);
 
             $statement->execute();
@@ -458,7 +488,7 @@ class DB
     public function increment()
     {
         try {
-
+            if(empty($this->builder)) throw new \Exception('please select table');
             $params = func_get_args();
             switch (count($params)) {
                 case 1:
@@ -484,6 +514,7 @@ class DB
             $this->_sql[] = $sql; 
             $this->realGetConn();
             $statement = $this->pdo->prepare($sql);
+            if(false === $statement) throw new \Exception('SQL error:' . $sql);
             $statement->execute();
             $ret = $statement->rowCount();
 
@@ -508,6 +539,7 @@ class DB
     public function decrement()
     {
         try {
+            if(empty($this->builder)) throw new \Exception('please select table');
             $params = func_get_args();
             switch (count($params)) {
                 case 1:
@@ -533,6 +565,7 @@ class DB
             $this->_sql[] = $sql; 
             $this->realGetConn();
             $statement = $this->pdo->prepare($sql);
+            if(false === $statement) throw new \Exception('SQL error:' . $sql);
             $statement->execute();
             $ret = $statement->rowCount();
 
@@ -558,32 +591,60 @@ class DB
         }
     }
 
-    private function realGetConn()
+    /**
+     * 获取数据库PDO对象链接
+     *
+     * @author pingo
+     * @created_at 00-00-00
+     * @param integer $times
+     * @param integer $count
+     * @return void
+     */
+    private function realGetConn($times = 5, $count = 1)
     {
+
         try {
             //code...
-            if (! $this->in_transaction) {
+            if (! $this->in_transaction && $this->hasConnect == false) {
                 $this->pdo = $this->pool->borrow();
                 $this->hasConnect = true;
             }
         } catch (\Throwable $th) {
             //throw $th;
             if(strpos($th->getMessage(), 'MySQL server has gone away')!==false){
-                return false;
+                throw new \Exception($th->getMessage());
             }
-            $this->realGetConn();
+            if($count >= $times) throw new \Exception('获取数据库链接失败，重试次数：'. $times);
+            $count++;
+            $this->realGetConn($times, $count);
         }
     }
 
     private function release()
     {
-        if (! $this->in_transaction) {
-            $this->pool->return($this->pdo);
-            $this->hasConnect = false;
+        try {
+            //code...
+            if (! $this->in_transaction && $this->hasConnect && $this->manual_return_conn == false) {
+                $this->pool->return($this->pdo);
+                $this->hasConnect = false;
+            }
+            $this->builder = (new Builder)->table($this->table);
+        } catch (\Throwable $th) {
+            //throw $th;
         }
-        $this->builder = (new Builder)->table($this->table);
     }
 
+    public function return()
+    {
+        try {
+            //code...
+            $this->pool->return($this->pdo);
+            $this->hasConnect = false;
+            $this->builder = (new Builder)->table($this->table);
+        } catch (\Throwable $th) {
+            //throw $th;
+        }
+    }
     /**
      * 统计
      *
@@ -603,7 +664,7 @@ class DB
             $statement = $this->pdo->prepare($sql);
 
             //$this->bindValues($statement, $bindings);
-
+            if(false === $statement) throw new \Exception('SQL error:' . $sql);
             $statement->execute();
 
             $ret = $statement->fetch();

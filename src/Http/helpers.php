@@ -1,5 +1,7 @@
 <?php
 
+use Pingo\Pool\PoolManager;
+
 if (! function_exists('random_str')) {
     /**
      * 随机返回字符串
@@ -66,7 +68,7 @@ if(!function_exists("cache")){
      */
     function cache($key = null, $value = null)
     {
-        $RedisHandler = (new \Pingo\Database\Redis);
+        $RedisHandler = PoolManager::getInstance()->getConnectionPool('redis');
         if(is_null($key)) return $RedisHandler;
         if(!is_null($value)){
             return $RedisHandler->set($key, $value);

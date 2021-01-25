@@ -64,6 +64,9 @@ class Cron
 
     public function start()
     {
-        swoole_timer_tick(1000, [$this, 'tickCallback']);
+        //准点载入任务
+        swoole_timer_after((60 - date("s")) * 1000, function ()  {
+            swoole_timer_tick(1000, [$this, 'tickCallback']);
+        });
     }
 }
