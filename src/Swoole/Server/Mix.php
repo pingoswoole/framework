@@ -210,6 +210,8 @@ class Mix extends SwooleEvent
         $redis_setting    = Config::getInstance()->get("redis");
         $database_setting = Config::getInstance()->get("database");
         
+        \Pingo\Database\RedisPool::getInstance($redis_setting);
+
         $pool1 = new ConnectionPool(
             [
                 'minActive' => $database_setting['pool_min'],
@@ -227,27 +229,8 @@ class Mix extends SwooleEvent
             ]
         );
         $pool1->init();
-        $pool2 = new ConnectionPool(
-            [
-                'minActive' => $redis_setting['pool_min'],
-                'maxActive' => $redis_setting['pool_max'],
-                'maxWaitTime' => 10,
-            ],
-            new PhpRedisConnector,
-            [
-                'host'        => $redis_setting['host'],
-                'port'        => $redis_setting['port'],
-                'timeout'     => $redis_setting['time_out'],
-                'password'    => $redis_setting['auth'],
-                'database'    => $redis_setting['db_index'],
-                'options'     => $redis_setting['options']??[],
-                
-            ]
-        );
-        $pool2->init();
 
         $pools->addConnectionPool('mysql', $pool1);
-        $pools->addConnectionPool('redis', $pool2);
 
     }
 

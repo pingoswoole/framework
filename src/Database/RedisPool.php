@@ -45,6 +45,7 @@ class RedisPool
             if (empty($config)) {
                 throw new RuntimeException('redis config empty');
             }
+            $config['pool_size'] = $config['pool_size'] ?? 10;
             if (empty($config['pool_size'])) {
                 throw new RuntimeException('the size of redis connection pools cannot be empty');
             }

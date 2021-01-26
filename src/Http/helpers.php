@@ -68,7 +68,7 @@ if(!function_exists("cache")){
      */
     function cache($key = null, $value = null)
     {
-        $RedisHandler = PoolManager::getInstance()->getConnectionPool('redis')->borrow();
+        $RedisHandler = (new \Pingo\Database\Redis);
         if(is_null($key)) return $RedisHandler;
         if(!is_null($value)){
             return $RedisHandler->set($key, $value);
