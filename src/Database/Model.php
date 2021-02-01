@@ -68,6 +68,9 @@ class  Model
     protected $casts = []; //integer，float，double，，string，boolean，object，array， datetime 
     
     protected $with = [];
+
+    protected $with_current = null; //当前关联表执行的键
+
     /**
      * Indicates if the model exists.
      *
@@ -823,6 +826,7 @@ class  Model
                         if(is_callable($method)) $method = $key;
                         
                         if(\method_exists($this, $method)){
+                            $this->with_current = $key;
                             $this->{$method}();
                         }
                     }
@@ -866,6 +870,7 @@ class  Model
                         if(is_callable($method)) $method = $key;
                         
                         if(\method_exists($this, $method)){
+                            $this->with_current = $key;
                             $this->{$method}();
                         }
                     }
@@ -973,8 +978,8 @@ class  Model
         $relationClass = new $relationClass;
         $table = $relationClass->table;
         $builder = (new Builder)->table($table);
-        if(isset($this->with[$table]) && is_callable($this->with[$table])){
-            $call = $this->with[$table];
+        if(is_callable($this->with[$this->with_current])){
+            $call = $this->with[$this->with_current];
             $call($builder);
         }
         //关联条件
@@ -1042,8 +1047,8 @@ class  Model
         $relationClass = new $relationClass;
         $table = $relationClass->table;
         $builder = (new Builder)->table($table);
-        if(isset($this->with[$table]) && is_callable($this->with[$table])){
-            $call = $this->with[$table];
+        if(is_callable($this->with[$this->with_current])){
+            $call = $this->with[$this->with_current];
             $call($builder);
         }
         //关联条件
@@ -1110,8 +1115,8 @@ class  Model
         $relationClass = new $relationClass;
         $table = $relationClass->table;
         $builder = (new Builder)->table($table);
-        if(isset($this->with[$table]) && is_callable($this->with[$table])){
-            $call = $this->with[$table];
+        if(is_callable($this->with[$this->with_current])){
+            $call = $this->with[$this->with_current];
             $call($builder);
         }
         //关联条件
@@ -1220,8 +1225,8 @@ class  Model
         $piovtClass = new $piovtClass;
         $table = $relationClass->table;
         $builder = (new Builder)->table($table);
-        if(isset($this->with[$table]) && is_callable($this->with[$table])){
-            $call = $this->with[$table];
+        if(is_callable($this->with[$this->with_current])){
+            $call = $this->with[$this->with_current];
             $call($builder);
         }
         //关联条件
