@@ -10,11 +10,13 @@ namespace Pingo\Swoole;
 use Pingo\Component\ConsoleTools;
 use Pingo\Config\Config;
 use Pingo\Component\Di;
+use Pingo\Database\Migration;
 use Pingo\Log\LoggerInterface;
 use Pingo\Log\Logger;
 use Pingo\Trigger\Trigger;
 use Pingo\Trigger\TriggerInterface;
 use Pingo\Trigger\Location;
+
 /**
  * 应用
  *
@@ -36,7 +38,6 @@ class Application
      */
     public static function banner()
     {
-        
         echo <<<WELCOME
             _                                     _      
         (_)                                   | |     
@@ -46,16 +47,17 @@ class Application
     | .__/|_|_| |_|\__, |___/ \_/\_/ \___/ \___/|_|\___|
     | |             __/ |                               
     |_|            |___/        
-                 @author pingo <pingstrong@163.com>
+                  
     -------------------------------------------------------
 
 WELCOME;
+        ConsoleTools::echo("listen ip", config("servers.ip"));
+        ConsoleTools::echo("listen port", config("servers.port"));
         ConsoleTools::echo("swoole version", phpversion("swoole"));
         ConsoleTools::echo("php version", phpversion());
         ConsoleTools::echo("pingoswoole version", Constant::VERSION);
         ConsoleTools::echo("tmp dir", WEB_TMP_PATH);
         ConsoleTools::echo("log dir", WEB_LOG_PATH);
-        //ConsoleTools::echo("listen port", WEB_LOG_PATH);
     }
 
      
@@ -68,9 +70,7 @@ WELCOME;
      */
     public static function run()
     {
-        
-
-        if( false === $commonds = ConsoleTools::parseArgs()){
+        if (false === $commonds = ConsoleTools::parseArgs()) {
             exit(ConsoleTools::echoError("命令参数错误！！！"));
         }
         //环境检查
@@ -85,8 +85,6 @@ WELCOME;
         \App\SwooleEvent::initialize();
         //启动swoole
         self::startServer($commonds[0], $commonds[1], $commonds[2]);
-        
-
     }
     /**
      * 环境检查
@@ -97,38 +95,37 @@ WELCOME;
      */
     public static function checkEnv()
     {
-        if(!extension_loaded("swoole")){
+        if (!extension_loaded("swoole")) {
             ConsoleTools::echoError("please install swoole php extension.");
             exit();
         }
-        if(version_compare(phpversion(),'7.3.0','<')) {
+        if (version_compare(phpversion(), '7.3.0', '<')) {
             ConsoleTools::echoError("php version must >= 7.3.0, current php version = ".phpversion());
             exit();
         }
-        if(version_compare(swoole_version(),'4.4.5','<')) {
-            
+        if (version_compare(swoole_version(), '4.4.5', '<')) {
             ConsoleTools::echoError("the swoole version must >= 4.4.5, current swoole version = ".swoole_version());
             exit();
         }
-        if(!extension_loaded('pcntl')) {
+        if (!extension_loaded('pcntl')) {
             ConsoleTools::echoError("Missing install pcntl extentions,please install it");
             exit();
-		}
+        }
 
-		if(!extension_loaded('posix')) {
+        if (!extension_loaded('posix')) {
             ConsoleTools::echoError("Missing install posix extentions,please install it");
             exit();
-		}
+        }
 
-		if(!extension_loaded('zlib')) {
+        if (!extension_loaded('zlib')) {
             ConsoleTools::echoError("Missing install zlib extentions,please install it");
             exit();
-		}
+        }
 
-		if(!extension_loaded('mbstring')) {
+        if (!extension_loaded('mbstring')) {
             ConsoleTools::echoError("Missing install mbstring extentions,please install it");
             exit();
-		}
+        }
     }
     /**
      * 加载配置文件
@@ -146,9 +143,12 @@ WELCOME;
     private static function initRuntimeDir()
     {
         //创建日记目录、临时目录
-        if(!is_dir(WEB_LOG_PATH)) mkdir(WEB_LOG_PATH, 0777, true);
-        if(!is_dir(WEB_TMP_PATH)) mkdir(WEB_TMP_PATH, 0777, true);
-        
+        if (!is_dir(WEB_LOG_PATH)) {
+            mkdir(WEB_LOG_PATH, 0777, true);
+        }
+        if (!is_dir(WEB_TMP_PATH)) {
+            mkdir(WEB_TMP_PATH, 0777, true);
+        }
     }
 
     //注册【错误、异常、脚本关闭】处理器
@@ -177,7 +177,7 @@ WELCOME;
         //在没有配置自定义错误处理器的情况下，转化为trigger处理
         $errorHandler = Di::getInstance()->get(Constant::ERROR_HANDLER);
         if (!is_callable($errorHandler)) {
-            $errorHandler = function ($errorCode, $description, $file = null, $line = null) use($trigger) {
+            $errorHandler = function ($errorCode, $description, $file = null, $line = null) use ($trigger) {
                 $l = new Location();
                 $l->setFile($file);
                 $l->setLine($line);
@@ -188,7 +188,7 @@ WELCOME;
 
         $func = Di::getInstance()->get(Constant::SHUTDOWN_FUNCTION);
         if (!is_callable($func)) {
-            $func = function () use($trigger) {
+            $func = function () use ($trigger) {
                 $error = error_get_last();
                 if (!empty($error)) {
                     $l = new Location();
@@ -199,7 +199,6 @@ WELCOME;
             };
         }
         register_shutdown_function($func);
-
     }
 
     //启动swoole
@@ -210,22 +209,23 @@ WELCOME;
                 # code...
                 $servers = Config::getInstance()->get("servers");
                 $daemonize = false;
-                if(in_array('-d', $options)) $daemonize = true;
+                if (in_array('-d', $options)) {
+                    $daemonize = true;
+                }
                 $servers['protocol'][\Pingo\Swoole\Constant::SWOOLE_WEBSOCKET_SERVER]['setting']['daemonize'] = $daemonize;
                 Manager::getInstance()->setSetting($servers);
-                if($action === "start"){
+                if ($action === "start") {
                     //WELLCOME
                     self::banner();
                     Manager::getInstance()->createSwooleServer();
                     Manager::getInstance()->start();
-                }elseif ($action === "stop") {
+                } elseif ($action === "stop") {
                     # code...
                     Manager::getInstance()->stop();
-                }elseif ($action === "restart") {
+                } elseif ($action === "restart") {
                     # code...
                     Manager::getInstance()->reload();
-                }else{
-
+                } else {
                 }
                 break;
             case 'task':
@@ -240,15 +240,14 @@ WELCOME;
             case 'config':
                 # code...
                 break;
-                                                    
+            case 'migration':
+                 
+                break;
             default:
                 # code...
-                ConsoleTools::echoError("Please use server:start | task | process | config |crontab");
+                ConsoleTools::echoError("Please use server:start | task | process | config | crontab | migration:create|reset");
                 exit();
                 break;
         }
     }
-    
-
-
 }

@@ -14,7 +14,6 @@ use \Swoole\Http\Response as SwResponse;
 
 class Request extends ServerRequest
 {
-
     protected $_get = [];
 
     protected $_post = [];
@@ -70,9 +69,9 @@ class Request extends ServerRequest
         $this->initHeaders();
         $protocol = str_replace('HTTP/', '', $request->server['server_protocol']) ;
         //为单元测试准备
-        if($request->fd){
+        if ($request->fd) {
             $body = new Stream($request->rawContent());
-        }else{
+        } else {
             $body = new Stream('');
         }
         $uri = $this->initUri();
@@ -80,8 +79,6 @@ class Request extends ServerRequest
         $method = $request->server['request_method'];
         parent::__construct($method, $uri, null, $body, $protocol, $request->server);
         $this->withCookieParams($this->initCookie())->withQueryParams($this->initGet())->withParsedBody($this->initPost())->withUploadedFiles($files);
-        
-        
     }
 
     public function getSwooleRequest()
@@ -153,6 +150,79 @@ class Request extends ServerRequest
     }
 
     /**
+     * 数据方式获取请求GET参数
+     *
+     * @param array $data = [param=> [type，default]]  type: int|float|array|string
+     * @return array
+     */
+    public function gets(array $data = []):array
+    {
+        $_result = [];
+        foreach ($data as $key => $row) {
+            # code...
+            $var = is_int($key) ? $row : $key;
+            if (isset($this->_get[$var])) {
+                $_result[$var] = isset($row[0])? $this->_format_var($this->_get[$var], $row[0]) : $this->_get[$var];
+            } elseif (isset($row[1])) {
+                # 有默认值
+                $_result[$var] =  $row[1];
+            }
+        }
+        return $_result;
+    }
+
+    /**
+     * 数据方式获取请求POST参数
+     *
+     * @param array  $data = [param=> [type，default]]  type: int|float|array|string
+     * @return array
+     */
+    public function posts(array $data = []):array
+    {
+        $_result = [];
+        foreach ($data as $key => $row) {
+            # code...
+            $var = is_int($key) ? $row : $key;
+            if (isset($this->_post[$var])) {
+                $_result[$var] = isset($row[0])? $this->_format_var($this->_post[$var], $row[0]) : $this->_post[$var];
+            } elseif (isset($row[1])) {
+                # 有默认值
+                $_result[$var] =  $row[1];
+            }
+        }
+        return $_result;
+    }
+    /**
+     * 格式化请求参数
+     *
+     * @param [type] $val
+     * @param [type] $type int float array string
+     * @return void
+     */
+    protected function _format_var($val, $type)
+    {
+        switch ($type) {
+            case 'int':
+                # code...
+                return intval($val);
+                break;
+            case 'float':
+                return floatval($val);
+                break;
+            case 'array':
+                return (array) $val;
+                break;
+            case 'string':
+                return (string) $val;
+                break;
+            default:
+                # code...
+                return $val;
+                break;
+        }
+    }
+    
+    /**
      * 获取get . post 的所有参数
      *
      * @return array
@@ -168,13 +238,12 @@ class Request extends ServerRequest
     }
 
     public function query($key = null, $default = null, $filter = null)
-    {   
+    {
         return $this->_fetchParmas('get', $key, $default, $filter);
     }
 
     public function _fetchParmas($method = 'get', $key = null, $default = null, $filter = null)
     {
-        
         $data   = [];
         $result = [];
         switch ($method) {
@@ -191,8 +260,12 @@ class Request extends ServerRequest
                 $data = array_merge($this->_get, $this->_post);
                 break;
         }
-        if(empty($key)) return $data;
-        if(!is_array($key)) $key = [$key];
+        if (empty($key)) {
+            return $data;
+        }
+        if (!is_array($key)) {
+            $key = [$key];
+        }
         foreach ($key as $name) {
             # code...
             $result[$name] = $this->_filterParams($data[$name]?? $default, $filter);
@@ -334,19 +407,19 @@ class Request extends ServerRequest
     }
  
 
-    function getRequestParam(...$key)
+    public function getRequestParam(...$key)
     {
         $data = $this->getParsedBody() + $this->getQueryParams();
-        if(empty($key)){
+        if (empty($key)) {
             return $data;
-        }else{
+        } else {
             $res = [];
-            foreach ($key as $item){
+            foreach ($key as $item) {
                 $res[$item] = isset($data[$item])? $data[$item] : null;
             }
-            if(count($key) == 1){
+            if (count($key) == 1) {
                 return array_shift($res);
-            }else{
+            } else {
                 return $res;
             }
         }
@@ -361,12 +434,12 @@ class Request extends ServerRequest
         $query = isset($this->request->server['query_string']) ? $this->request->server['query_string'] : '';
         $uri->withQuery($query);
         //host与port以header为准，防止经过proxy
-        if(isset($this->request->header['host'])){
+        if (isset($this->request->header['host'])) {
             $host = $this->request->header['host'];
-            $host = explode(":",$host);
+            $host = explode(":", $host);
             $realHost = $host[0];
             $port = isset($host[1]) ? $host[1] : null;
-        }else{
+        } else {
             $realHost = '127.0.0.1';
             $port = $this->request->server['server_port'];
         }
@@ -378,45 +451,45 @@ class Request extends ServerRequest
     private function initHeaders()
     {
         $headers = isset($this->request->header) ? $this->request->header :[];
-        foreach ($headers as $header => $val){
-            $this->withAddedHeader($header,$val);
+        foreach ($headers as $header => $val) {
+            $this->withAddedHeader($header, $val);
         }
     }
 
     private function initFiles()
     {
-        if(isset($this->request->files)){
+        if (isset($this->request->files)) {
             $normalized = array();
-            foreach($this->request->files as $key => $value){
+            foreach ($this->request->files as $key => $value) {
                 //如果是二维数组文件
-                if(is_array($value) && empty($value['tmp_name'])){
+                if (is_array($value) && empty($value['tmp_name'])) {
                     $normalized[$key] = [];
-                    foreach($value as $file){
-                        if (empty($file['tmp_name'])){
+                    foreach ($value as $file) {
+                        if (empty($file['tmp_name'])) {
                             continue;
                         }
                         $file = $this->initFile($file);
-                        if($file){
+                        if ($file) {
                             $normalized[$key][] = $file;
                         }
                     }
                     continue;
-                }else{
+                } else {
                     $file = $this->initFile($value);
-                    if($file){
+                    if ($file) {
                         $normalized[$key] = $file;
                     }
                 }
             }
             return $normalized;
-        }else{
+        } else {
             return array();
         }
     }
 
     private function initFile(array $file)
     {
-        if(empty($file['tmp_name'])){
+        if (empty($file['tmp_name'])) {
             return null;
         }
         return new UploadFile(
@@ -452,25 +525,4 @@ class Request extends ServerRequest
     {
         $this->getBody()->close();
     }
-
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

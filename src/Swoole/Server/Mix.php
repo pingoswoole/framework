@@ -22,8 +22,8 @@ class Mix extends SwooleEvent
     protected $setting;
     protected $swoole_set = [];
     const CALLBACK_EVENT = [
-        'Start', 
-        'Shutdown', 
+        'Start',
+        'Shutdown',
         'WorkerStart',
         'WorkerStop',
         'WorkerExit',
@@ -57,15 +57,13 @@ class Mix extends SwooleEvent
     protected function registerEvent(array $events)
     {
         //注册主服务事件回调
-        foreach ($events as  $event){
-            
-            if($event === "Request"){
-
+        foreach ($events as  $event) {
+            if ($event === "Request") {
                 $route = \Pingo\Http\Route::getInstance();
                 $requestHook = Di::getInstance()->get(Constant::HTTP_GLOBAL_ON_REQUEST);
                 $afterRequestHook = Di::getInstance()->get(Constant::HTTP_GLOBAL_AFTER_REQUEST);
                  
-                $this->server->on($event, function($request, $response) use($route, $requestHook, $afterRequestHook){
+                $this->server->on($event, function ($request, $response) use ($route, $requestHook, $afterRequestHook) {
                     Context::set('Request', $request);
                     Context::set('Response', $response);
                     //var_dump($route);
@@ -91,12 +89,9 @@ class Mix extends SwooleEvent
                         }
                     }
                     $response_psr->__response();
-                    
                 });
-
-            }else{
-                
-                $this->server->on($event, [$this, "on{$event}"]); 
+            } else {
+                $this->server->on($event, [$this, "on{$event}"]);
             }
         }
     }
@@ -112,17 +107,17 @@ class Mix extends SwooleEvent
     {
         ConsoleTools::opCacheClear();
         $this->server = new \Swoole\WebSocket\Server(
-            $this->swoole_set['host'], 
-            $this->swoole_set['port'], 
-            $this->swoole_set['mode'], 
-            $this->swoole_set['sock_type']);
+            $this->swoole_set['host'],
+            $this->swoole_set['port'],
+            $this->swoole_set['mode'],
+            $this->swoole_set['sock_type']
+        );
         $this->server->set($this->swoole_set['setting']);
         $this->registerEvent(self::CALLBACK_EVENT);
         
         $this->addServer();
 
         return [$this->server, $this->childServer];
-
     }
 
     private function addServer()
@@ -131,42 +126,37 @@ class Mix extends SwooleEvent
         $udp_set = $this->setting['protocol'][\Pingo\Swoole\Constant::SWOOLE_UDP_SERVER];
         $mqtt_set = $this->setting['protocol'][\Pingo\Swoole\Constant::SWOOLE_MQTT_SERVER];
         //TCP
-        if($tcp_set['enable']){
-            $tcpServer = $this->server->addListener( $tcp_set['host'], $tcp_set['port'], SWOOLE_SOCK_TCP);
+        if ($tcp_set['enable']) {
+            $tcpServer = $this->server->addListener($tcp_set['host'], $tcp_set['port'], SWOOLE_SOCK_TCP);
             $tcpServer->set($tcp_set);
-            foreach($tcp_set['callbacks'] as $event => $callback)
-            {
-                $tcpServer->on($event, function(...$args) use($callback){
+            foreach ($tcp_set['callbacks'] as $event => $callback) {
+                $tcpServer->on($event, function (...$args) use ($callback) {
                     call_user_func($callback, ...$args);
                 });
             }
             $this->childServer['tcp'] = $tcpServer;
         }
         //UDP
-        if($udp_set['enable']){
-            $udpServer = $this->server->addListener( $udp_set['host'], $udp_set['port'], SWOOLE_SOCK_UDP);
+        if ($udp_set['enable']) {
+            $udpServer = $this->server->addListener($udp_set['host'], $udp_set['port'], SWOOLE_SOCK_UDP);
             $udpServer->set($udp_set);
-            foreach($udp_set['callbacks'] as $event => $callback)
-            {
-                $udpServer->on($event, function(...$args) use($callback){
+            foreach ($udp_set['callbacks'] as $event => $callback) {
+                $udpServer->on($event, function (...$args) use ($callback) {
                     call_user_func($callback, ...$args);
                 });
             }
             $this->childServer['udp'] = $udpServer;
-            
         }
         //MQTT
-        if($mqtt_set['enable']){
-            $mqttServer = $this->server->addListener( $mqtt_set['host'], $mqtt_set['port'], SWOOLE_SOCK_TCP);
+        if ($mqtt_set['enable']) {
+            $mqttServer = $this->server->addListener($mqtt_set['host'], $mqtt_set['port'], SWOOLE_SOCK_TCP);
             $mqttServer->set($mqtt_set);
-            foreach($mqtt_set['callbacks'] as $event => $callback)
-            {
-                $mqttServer->on($event, function(...$args) use($callback){
+            foreach ($mqtt_set['callbacks'] as $event => $callback) {
+                $mqttServer->on($event, function (...$args) use ($callback) {
                     call_user_func($callback, ...$args);
                 });
             }
             $this->childServer['mqtt'] = $mqttServer;
-            
         }
     }
     /**
@@ -179,12 +169,11 @@ class Mix extends SwooleEvent
      */
     public function onStart(\Swoole\Server $server)
     {
-        file_put_contents( $this->setting['master_pid_file'], $server->master_pid);
-        file_put_contents( $this->setting['manager_pid_file'], $server->manager_pid);
+        file_put_contents($this->setting['master_pid_file'], $server->master_pid);
+        file_put_contents($this->setting['manager_pid_file'], $server->manager_pid);
         set_process_name($this->setting['master_process_name']);
         
         PoolManager::getInstance();
-
     }
 
     public function onShutdown(\Swoole\Server $server)
@@ -200,9 +189,9 @@ class Mix extends SwooleEvent
 
     public function onWorkerStart(\Swoole\Server $server, int $workerId)
     {
-        if($workerId > $this->swoole_set['setting']['worker_num']){
+        if ($workerId > $this->swoole_set['setting']['worker_num']) {
             set_process_name($this->setting['task_process_name'] . $workerId);
-        }else{
+        } else {
             set_process_name($this->setting['worker_process_name'] . $workerId);
         }
         //进程池设置
@@ -231,17 +220,15 @@ class Mix extends SwooleEvent
         $pool1->init();
 
         $pools->addConnectionPool('mysql', $pool1);
-
     }
 
     public function onWorkerStop(\Swoole\Server $server, int $workerId)
     {
-         PoolManager::getInstance()->closeConnectionPools();
+        PoolManager::getInstance()->closeConnectionPools();
     }
 
     public function onWorkerExit(\Swoole\Server $server, int $workerId)
     {
-
     }
 
     public function onConnect(...$params)
@@ -251,16 +238,13 @@ class Mix extends SwooleEvent
 
     public function onReceive(\Swoole\Server $server, int $fd, int $reactorId, string $data)
     {
-
     }
 
     public function onPacket(\Swoole\Server $server, string $data, array $clientInfo)
     {
-
     }
     public function onTask(\Swoole\Server $server, \Swoole\Server\Task $task)
     {
-       
         call_user_func_array([\App\SwooleEvent::class, 'onTask'], [$server, $task]);
     }
 
@@ -275,43 +259,37 @@ class Mix extends SwooleEvent
         call_user_func([\App\SwooleEvent::class, 'onFinish'], ...$params);
     }
 
-    public function onPipeMessage(\Swoole\Server $server, int $src_worker_id,  $message)
+    public function onPipeMessage(\Swoole\Server $server, int $src_worker_id, $message)
     {
-
     }
 
     public function onWorkerError(\Swoole\Server $server, int $worker_id, int $worker_pid, int $exit_code, int $signal)
     {
-
     }
 
     public function onManagerStart(\Swoole\Server $server)
     {
         set_process_name($this->setting['manager_process_name']);
-        
     }
     
     public function onManagerStop(\Swoole\Server $server)
     {
-
     }
     //Worker 进程 Reload 之前触发此事件，在 Manager 进程中回调
     public function onBeforeReload(\Swoole\Server $server)
     {
-
     }
     //Worker 进程 Reload 之后触发此事件，在 Manager 进程中回调
 
     public function onAfterReload(\Swoole\Server $server)
     {
-
     }
 
     public function onRequest(\Swoole\Http\Request $request, \Swoole\Http\Response $response)
     {
-       /*  Context::set('Request', $request);
-        Context::set('Response', $response);
-        $this->_route->dispatch($request, $response); */
+        /*  Context::set('Request', $request);
+         Context::set('Response', $response);
+         $this->_route->dispatch($request, $response); */
     }
 
     public function onMessage(...$params)
@@ -320,7 +298,7 @@ class Mix extends SwooleEvent
     }
 
     public function onOpen(...$params)
-    {   
+    {
         call_user_func([\App\SwooleEvent::class, 'onOpen'], ...$params);
     }
 
@@ -328,6 +306,4 @@ class Mix extends SwooleEvent
     {
         call_user_func([\App\SwooleEvent::class, 'onHandShake'], ...$params);
     }
-      
-
 }

@@ -29,38 +29,109 @@ class Route
     {
         if (is_null(self::$instance)) {
             self::$instance = new self();
-            self::loadRoute();
-            self::$dispatcher = simpleDispatcher(
-                function (\FastRoute\RouteCollector $routerCollector) {
-                    foreach (self::$config as $key => $routerDefine) {
-                        if(!isset($routerDefine['namespace']) || !isset($routerDefine['list'])) continue;
-                        $route_list = $routerDefine['list'];
-                        $routerCollector->addGroup($routerDefine['namespace'], function (\FastRoute\RouteCollector $r) use($route_list) {
-                            foreach ($route_list as $route) {
-                                # code...
-                                if(count($route) !== 3) continue;
-                                $r->addRoute($route[0], $route[1], $route[2]);
+            $with_route = config("app.with_route");
+            if ($with_route) {
+                self::loadRoute();
+                self::$dispatcher = simpleDispatcher(
+                    function (\FastRoute\RouteCollector $routerCollector) {
+                        foreach (self::$config as $key => $routerDefine) {
+                            if (!isset($routerDefine['namespace']) || !isset($routerDefine['list'])) {
+                                continue;
                             }
-                        });
-                        
+                            $route_list = $routerDefine['list'];
+                            $routerCollector->addGroup($routerDefine['namespace'], function (\FastRoute\RouteCollector $r) use ($route_list) {
+                                foreach ($route_list as $route) {
+                                    # code...
+                                    if (count($route) !== 3) {
+                                        continue;
+                                    }
+                                    $r->addRoute($route[0], $route[1], $route[2]);
+                                }
+                            });
+                        }
                     }
-                }
-            );
+                );
+            }
         }
         return self::$instance;
     }
  
-     /**
-     * @param $request
-     * @param $response
-     * @throws \Exception
-     * @return mixed|void
-     */
+    /**
+    * @param $request
+    * @param $response
+    * @throws \Exception
+    * @return mixed|void
+    */
     public function dispatch(\Pingo\Http\Request $request, \Pingo\Http\Response $response)
     {
         $request_server = $request->getServer();
         $method = $request_server['request_method'] ?? 'GET';
         $uri    = $request_server['request_uri'] ?? '/';
+
+        $with_route = config("app.with_route");
+        if (!$with_route) {
+            //关闭路由
+            
+            $mvc = array_filter(explode("/", $uri));
+            if (count($mvc) < 3) {
+                return $this->defaultRouter($request, $response, $uri, "methodNotFound");
+            }
+            if (false !== strstr($uri, "?")) {
+                $mvc = array_slice($mvc, 0, count($mvc) - 1);
+            }
+            $mvc = array_map(function ($item) {
+                return ucfirst(line_tohump($item)) ;
+            }, $mvc);
+
+            $func =   lcfirst(array_pop($mvc));
+            $mvc = array_values($mvc);
+             
+            //禁用Admin路由访问
+            if ($mvc[0] === 'Admin') {
+                throw new RuntimeException("Route {$uri} defined is not permit");
+            }
+            //是否为后端访问，转换模块别名
+            $admin_route_alias = config('app.admin_route_alias');
+            if ($admin_route_alias === lcfirst($mvc[0])) {
+                $mvc[0] = 'Admin';
+            }
+            $className = self::$controller_namespace . '\\' . implode("\\", $mvc) . "Controller";
+            if (! class_exists($className)) {
+                throw new RuntimeException("Route {$uri} defined '{$className}' Class Not Found");
+            }
+
+            try {
+                //code...
+                $RefClass = new \ReflectionClass($className);
+                $public_methods = $RefClass->getMethods(\ReflectionMethod::IS_PUBLIC);
+                $allow_methods = [];
+                foreach ($public_methods as $item) {
+                    array_push($allow_methods, $item->getName());
+                }
+                if (in_array($func, $allow_methods)) {
+                    $RefClassObj = $RefClass->newInstanceArgs([$request, $response, Manager::getInstance()->getSwooleServer()]);
+                    $befor_method = "onRequest";
+                    if ($RefClass->hasMethod($befor_method)) {
+                        $befor_method_handler = $RefClass->getMethod($befor_method);
+                        $befor_method_handler->setAccessible(true);
+                        $before_res = $befor_method_handler->invokeArgs($RefClassObj, [$func]);
+                        if (false === $before_res) {
+                            return;
+                        }
+                        $action_handler = $RefClass->getMethod($func);
+                        $action_handler->invokeArgs($RefClassObj, [$request, $response, []]);
+                    }
+                    //
+                } else {
+                    return $this->defaultRouter($request, $response, $uri, "methodNotFound");
+                }
+            } catch (\Throwable $th) {
+                //throw $th;
+            }
+            
+            return $this->defaultRouter($request, $response, $uri, "controllerNotFound");
+        }
+
         $routeInfo = self::$dispatcher->dispatch($method, $uri);
          
         switch ($routeInfo[0]) {
@@ -91,22 +162,24 @@ class Route
                         $RefClass = new \ReflectionClass($className);
                         $public_methods = $RefClass->getMethods(\ReflectionMethod::IS_PUBLIC);
                         $allow_methods = [];
-                        foreach ($public_methods as $item){
-                            array_push($allow_methods,$item->getName());
+                        foreach ($public_methods as $item) {
+                            array_push($allow_methods, $item->getName());
                         }
-                        if(in_array($func,$allow_methods)){
+                        if (in_array($func, $allow_methods)) {
                             $RefClassObj = $RefClass->newInstanceArgs([$request, $response, Manager::getInstance()->getSwooleServer()]);
                             $befor_method = "onRequest";
-                            if($RefClass->hasMethod($befor_method)){
+                            if ($RefClass->hasMethod($befor_method)) {
                                 $befor_method_handler = $RefClass->getMethod($befor_method);
                                 $befor_method_handler->setAccessible(true);
                                 $before_res = $befor_method_handler->invokeArgs($RefClassObj, [$func]);
-                                if(false === $before_res) return;
+                                if (false === $before_res) {
+                                    return;
+                                }
                                 $action_handler = $RefClass->getMethod($func);
                                 $action_handler->invokeArgs($RefClassObj, [$request, $response, $vars]);
                             }
                             //
-                        }else{
+                        } else {
                             return $this->defaultRouter($request, $response, $uri, "methodNotFound");
                         }
                     } catch (\Throwable $th) {
@@ -115,29 +188,6 @@ class Route
                     }
                     
                     return ;
-                    //
-                    //去掉中间件、 
-                    /* $middlewareHandler = function ($Request, $Response, $vars) use ($controller, $func) {
-                        return $controller->{$func}($Request, $Response, $vars ?? null);
-                    };
-
-                    $middleware_key = 'middleware';
-                    $reflectionClass = new \ReflectionClass ( $className );
-                    if($reflectionClass->hasProperty($middleware_key)){
-                        $reflectionProperty = $reflectionClass->getProperty($middleware_key);
-                        $reflectionProperty->setAccessible(true);
-                        $middleware_val = $reflectionProperty->getValue($controller);
-                        if(!empty($middleware_val)){
-                            $classMiddlewares = $controller->{$middleware_key}['__construct'] ?? [];
-                            $methodMiddlewares = $controller->{$middleware_key}[$func] ?? [];
-                            $middlewares = array_merge($classMiddlewares, $methodMiddlewares);
-                            if ($middlewares) {
-                                $middlewareHandler = $this->packMiddleware($middlewareHandler, array_reverse($middlewares));
-                            }
-                        }
-                    }
-                   
-                    return $middlewareHandler($Request, $Response, $vars ?? null); */
                 }
 
                 if (is_callable($handler)) {
@@ -194,13 +244,11 @@ class Route
     {
         $path = WEB_ROUTE_PATH;
         $dirFiles = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($path), \RecursiveIteratorIterator::LEAVES_ONLY);
-        foreach($dirFiles as $FileIterator)
-        {
-            if($FileIterator->isFile()){
+        foreach ($dirFiles as $FileIterator) {
+            if ($FileIterator->isFile()) {
                 $key = substr($FileIterator->getFileName(), 0, strpos($FileIterator->getFileName(), "."));
                 self::$config[$key] = include $FileIterator->getPath() . DIRECTORY_SEPARATOR . $FileIterator->getFileName();
             }
         }
     }
-
 }
