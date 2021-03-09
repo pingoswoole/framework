@@ -86,11 +86,7 @@ class Request extends ServerRequest
         return $this->request;
     }
     
-    private function _filterParams($data, $filter)
-    {
-        //
-        return $data;
-    }
+    
 
     public function setRouteParams($params = [])
     {
@@ -222,6 +218,12 @@ class Request extends ServerRequest
         }
     }
     
+    private function _filterParams($data, $filter)
+    {
+        //
+        return $this->_format_var($data, $filter);
+    }
+
     /**
      * 获取get . post 的所有参数
      *
