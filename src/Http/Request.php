@@ -148,7 +148,7 @@ class Request extends ServerRequest
     /**
      * 数据方式获取请求GET参数
      *
-     * @param array $data = [param=> [type，default]]  type: int|float|array|string
+     * @param array $data = [param=> [default, type]]  type: int|float|array|string
      * @return array
      */
     public function gets(array $data = []):array
@@ -158,10 +158,10 @@ class Request extends ServerRequest
             # code...
             $var = is_int($key) ? $row : $key;
             if (isset($this->_get[$var])) {
-                $_result[$var] = isset($row[0])? $this->_format_var($this->_get[$var], $row[0]) : $this->_get[$var];
-            } elseif (isset($row[1])) {
+                $_result[$var] = isset($row[1])? $this->_format_var($this->_get[$var], $row[1]) : $this->_get[$var];
+            } elseif (isset($row[0])) {
                 # 有默认值
-                $_result[$var] =  $row[1];
+                $_result[$var] =  $row[0];
             }
         }
         return $_result;
@@ -170,7 +170,7 @@ class Request extends ServerRequest
     /**
      * 数据方式获取请求POST参数
      *
-     * @param array  $data = [param=> [type，default]]  type: int|float|array|string
+     * @param array  $data = [param=> [default, type]]  type: int|float|array|string
      * @return array
      */
     public function posts(array $data = []):array
@@ -180,10 +180,10 @@ class Request extends ServerRequest
             # code...
             $var = is_int($key) ? $row : $key;
             if (isset($this->_post[$var])) {
-                $_result[$var] = isset($row[0])? $this->_format_var($this->_post[$var], $row[0]) : $this->_post[$var];
-            } elseif (isset($row[1])) {
+                $_result[$var] = isset($row[1])? $this->_format_var($this->_post[$var], $row[1]) : $this->_post[$var];
+            } elseif (isset($row[0])) {
                 # 有默认值
-                $_result[$var] =  $row[1];
+                $_result[$var] =  $row[0];
             }
         }
         return $_result;
