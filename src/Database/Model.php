@@ -234,24 +234,32 @@ class Model
 
     public function query($query, $bindings = [])
     {
-        $this->realGetConn();
+        try {
+            //code...
+            $this->realGetConn();
 
-        $statement = $this->pdo->prepare($query);
-        
-        if ($bindings) {
-            $this->bindValues($statement, $bindings);
+            $statement = $this->pdo->prepare($query);
+            if (false === $statement) {
+                throw new \Exception('SQL error:' . $query);
+            }
+            if ($bindings) {
+                $this->bindValues($statement, $bindings);
+            }
+            
+            $statement->execute();
+
+            $ret = $statement->fetchAll();
+
+            $this->release();
+
+            return $ret;
+        } catch (\Throwable $th) {
+            //throw $th;
+            throw new \Exception($th->getMessage());
         }
-        
-        $statement->execute();
-
-        $ret = $statement->fetchAll();
-
-        $this->release();
-
-        return $ret;
     }
 
-    protected function bindValues(PDOStatementProxy $statement, array $bindings): void
+    protected function bindValues($statement, array $bindings): void
     {
         foreach ($bindings as $key => $value) {
             $statement->bindValue(
@@ -281,7 +289,7 @@ class Model
             }
 
             $this->statement = $statement;
-            if($bindings){
+            if ($bindings) {
                 $this->bindValues($statement, $bindings);
             }
 
@@ -308,7 +316,6 @@ class Model
             //throw $th;
             throw new \Exception($th->getMessage());
         }
-
     }
 
     
